@@ -773,6 +773,12 @@ public sealed partial class KbService
         IReadOnlyList<string>? extraParents = null)
     {
         var seq = session.GetMaxSeq(doc.Id) + 1;
+        if (!string.IsNullOrWhiteSpace(namedVersion)
+            && session.NamedVersionExists(doc.Id, namedVersion))
+        {
+            throw KbException.Invalid($"语义版本 {namedVersion} 已存在；分支冲突请显式指定新的版本号。");
+        }
+
         var version = new VersionRow(
             KbIds.NewVersionId(),
             doc.Id,

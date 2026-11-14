@@ -585,6 +585,15 @@ public sealed class KbSession : IDisposable
         return rows;
     }
 
+    public bool NamedVersionExists(string docId, string namedVersion)
+    {
+        using var command = Command(
+            "SELECT 1 FROM kb_version WHERE doc_id = $doc AND named_version = $named LIMIT 1",
+            ("$doc", docId),
+            ("$named", namedVersion));
+        return command.ExecuteScalar() is not null;
+    }
+
     public int GetMaxSeq(string docId)
     {
         using var command = Command(

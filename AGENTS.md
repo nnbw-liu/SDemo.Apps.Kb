@@ -20,7 +20,7 @@
 
 ## 现状（2026-11-14）
 
-✅ **P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 77 个测试。
+✅ **P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 78 个测试。
 
 | 已做 | 说明 |
 | --- | --- |
@@ -180,6 +180,7 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 ## 不要读
 
 `obj/`、`bin/`、`TestResults/`、模型/索引缓存；`docs/requirements.md` 只通读一次。
+
 
 
 

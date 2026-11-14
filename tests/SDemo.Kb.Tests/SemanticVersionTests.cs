@@ -74,6 +74,37 @@ public sealed class SemanticVersionTests
     }
 
     [Fact]
+    public void 同一文档的语义版本不能重复()
+    {
+        using var kb = new TestKb();
+        var created = kb.Ingest("需求", ["A"], kind: KbKind.Requirement);
+
+        kb.Service.Revise(
+            new ReviseRequest
+            {
+                Source = new IngestSource { AppId = KbConstants.AppId },
+                DocId = created.DocId,
+                ExpectedVersion = 1,
+                AllowBranch = true,
+                NamedVersion = "v1.1",
+                Blocks = [new BlockInput { Op = ChangeOp.Replace, BlockId = created.BlockIds[0], Text = "A1" }],
+            },
+            KbConstants.AppId);
+
+        Assert.Throws<KbException>(() => kb.Service.Revise(
+            new ReviseRequest
+            {
+                Source = new IngestSource { AppId = KbConstants.AppId },
+                DocId = created.DocId,
+                ExpectedVersion = 1,
+                AllowBranch = true,
+                NamedVersion = "v1.1",
+                Blocks = [new BlockInput { Op = ChangeOp.Replace, BlockId = created.BlockIds[0], Text = "A2" }],
+            },
+            KbConstants.AppId));
+    }
+
+    [Fact]
     public void 从旧版本拉分支再合并两个分支()
     {
         using var kb = new TestKb();
