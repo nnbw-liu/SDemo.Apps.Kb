@@ -20,7 +20,7 @@
 
 ## 现状（2026-11-14）
 
-✅ **P4-a 地基已落地并跑通验收**：五件套 + `SDemo.Kb.slnf` + 36 个测试。
+✅ **P4-a 地基 + P4-b 保留已落地并跑通验收**：五件套 + `SDemo.Kb.slnf` + 49 个测试。
 
 | 已做 | 说明 |
 | --- | --- |
@@ -34,8 +34,10 @@
 | MCP | 11 个 `kb_*` 工具 + 风险/审批元数据；`kb_update` / `kb_delete` 高风险 |
 | 写入方 outbox | `KbOutbox` + `KbIngestClient`；KB 离线时写入落本地队列，不抛回业务事务 |
 | 导入 | md / txt；导入即建 `v1`，再次导入同一路径按块 diff 建新版本 |
+| **保留与 GC** | staging TTL（会议 30 / Agent 90，可被 `ttlDays` 覆盖）→ 软删 → 回收站 7 天 → 块/原件 GC；被引用文档整篇保护 |
+| **收件箱与统计** | `/v1/inbox`（到期倒计时、正文/原件体积）、`/v1/promote-batch`、`/v1/stats`、`/v1/settings/retention`；Host 每小时维护，`--maintain` 手动跑 |
 
-**未做（按分期）**：docx / pptx / xlsx / pdf 解析与 anchor（P4-d）；TTL、待归档收件箱、KB 界面（P4-b）；向量检索（P4+）。`promote` / `retract` 与 diff / rationale / 影响面已提前落地。
+**未做（按分期）**：docx / pptx / xlsx / pdf 解析与 anchor（P4-d）；KB 查看器界面（P4-e，spike 见 [docs/kb-ui-spike.md](docs/kb-ui-spike.md)）；向量检索（P4+）。命名修订与多父合并（P4-c）尚未做。
 
 ## 工程结构
 
@@ -61,6 +63,7 @@ src\SDemo.App.Kb.Host\bin\Release\net10.0\SDemo.Kb.exe
 SDemo.Kb.exe --data-dir <目录> --port <端口>
 SDemo.Kb.exe --issue-token sdemo.meeting     # 签写入 token（stdout）
 SDemo.Kb.exe --rebuild-index                 # 整库重建 FTS
+SDemo.Kb.exe --maintain                      # 跑一次 TTL / 回收站 / GC
 ```
 
 运行期连接信息写到 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb.json`（不含 token）。
@@ -73,8 +76,12 @@ SDemo.Kb.exe --rebuild-index                 # 整库重建 FTS
 | --- | --- | --- |
 | ingest | `POST /v1/ingest` | 新建；`appId + entityUri + contentHash` 幂等；重复投递不建版本 |
 | revise | `POST /v1/revise` | 块级 ops + `expectedVersion`；只有 add / replace / remove |
-| promote | `POST /v1/promote` | 改 `retention`；durable → staging 必须 `confirmed=true` |
+| promote | `POST /v1/promote` | 改 `retention`；durable → staging 必须 `confirmed=true`；staging 重新算 `expires_at` |
 | retract | `POST /v1/retract` | 软删；返回受影响引用清单 |
+| inbox | `GET /v1/inbox` | 待归档列表：到期倒计时、正文/原件体积；仅 KB / Agent |
+| promote-batch | `POST /v1/promote-batch` | 批量归档（最多 200）；逐条返回成功/失败 |
+| stats | `GET /v1/stats` | 库体积、原件体积、可清理项、文档/块/版本计数 |
+| retention | `GET/PUT /v1/settings/retention` | 版本保留数、会议/Agent TTL、回收站天数 |
 
 鉴权：`Authorization: Bearer <app token>`；`source.appId` 必须与 token 绑定一致（服务端注入，不接受自报）。token 以 sha256 存 `kb_token`。
 
@@ -122,6 +129,10 @@ SDemo.Kb.exe --rebuild-index                 # 整库重建 FTS
 - `Search` 的 AND→OR 放宽只对长查询（>3 个 2-gram）生效，短查询放宽会明显掉 precision。
 - 路由词（以前 / 为什么 / 最近）只用于选索引面，查询前要剥掉，否则正文里永远匹配不到它。
 - 标题参与 FTS terms（×4）；改标题必须重建该文档所有块的索引。
+- TTL 只对 staging 生效；durable / requirement 的 `expires_at` 必须为 NULL。
+- 回收站物理清理前必须先看 `kb_link`：有入库引用的文档整篇保留，否则历史引用会变成死链。
+- 块 GC 的条件是「无版本边 + 无引用」；只删版本边不删块，历史才读得到。
+- Schema 变更必须走 `KbSchema.Migrate` + `PRAGMA user_version`，不能只改 `CREATE TABLE IF NOT EXISTS`。
 - 写面的 `source.appId` 由 token 决定，客户端自报的值只用于比对，不能作为 owner。
 - 测试里用完 SQLite 要 `SqliteConnection.ClearAllPools()`，否则临时目录删不掉。
 

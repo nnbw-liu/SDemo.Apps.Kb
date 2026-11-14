@@ -442,6 +442,7 @@ public sealed partial class KbService
             CreatedAt = doc.CreatedAt,
             UpdatedAt = doc.UpdatedAt,
             DeletedAt = doc.DeletedAt,
+            ExpiresAt = doc.ExpiresAt,
             BlockCount = current is null ? 0 : session.CountBlocksInVersion(current.Id),
         };
     }

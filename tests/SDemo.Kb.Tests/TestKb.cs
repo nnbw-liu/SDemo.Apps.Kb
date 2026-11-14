@@ -8,16 +8,19 @@ namespace SDemo.Kb.Tests;
 /// <summary>每个测试一个临时库；不共享静态状态，测试可并行。</summary>
 internal sealed class TestKb : IDisposable
 {
-    public TestKb()
+    public TestKb(DateTimeOffset? now = null)
     {
         DataDirectory = Path.Combine(Path.GetTempPath(), "sdemo-kb-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(DataDirectory);
 
+        Clock = new FakeClock(now ?? DateTimeOffset.UtcNow);
         Database = new KbDatabase(DataDirectory);
         Store = new KbStore(Database);
-        Service = new KbService(Store, new KbBlobStore(DataDirectory));
+        Service = new KbService(Store, new KbBlobStore(DataDirectory), Clock);
         Token = Service.IssueToken(KbConstants.AppId);
     }
+
+    public FakeClock Clock { get; }
 
     public string DataDirectory { get; }
 
@@ -36,22 +39,40 @@ internal sealed class TestKb : IDisposable
         KbKind kind = KbKind.Reference,
         string appId = KbConstants.AppId,
         IEnumerable<IngestLink>? links = null,
-        string? rationale = null)
+        string? rationale = null,
+        int? ttlDays = null,
+        RetentionLevel? retention = null,
+        IEnumerable<IngestArtifact>? artifacts = null)
     {
         var request = new IngestRequest
         {
             Source = new IngestSource { AppId = appId, EntityUri = entityUri ?? string.Empty },
             Kind = kind,
             Title = title,
+            Retention = retention,
+            TtlDays = ttlDays,
             Rationale = rationale,
-            RationaleSource = RationaleSource.Import,
+            RationaleSource = appId == KbConstants.AppId ? RationaleSource.Import : RationaleSource.Ai,
             Blocks = blocks
                 .Select(text => new BlockInput { Op = ChangeOp.Add, Text = text })
                 .ToList(),
             Links = links?.ToList() ?? [],
+            Artifacts = artifacts?.ToList() ?? [],
         };
 
         return Service.Ingest(request, appId);
+    }
+
+    /// <summary>以 Agent 身份投一条暂存内容（默认 staging，可指定 TTL）。</summary>
+    public WriteResult CreateStaging(string title, IEnumerable<string> blocks, int? ttlDays = null)
+    {
+        return Ingest(
+            title,
+            blocks,
+            appId: "sdemo.agent",
+            kind: KbKind.Note,
+            ttlDays: ttlDays,
+            retention: RetentionLevel.Staging);
     }
 
     public WriteResult Revise(string docId, int expectedVersion, params BlockInput[] ops)

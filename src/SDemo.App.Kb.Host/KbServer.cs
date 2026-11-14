@@ -170,8 +170,11 @@ public sealed class KbServer : IDisposable
                 return;
             }
 
-            // 权限矩阵（kb-design §5.3）：写面归各 App；promote / retract / MCP 读正文只给 KB 与 Agent。
-            if (!KbService.IsPrivileged(appId) && path is "/v1/promote" or "/v1/retract" or "/mcp")
+            // 权限矩阵（kb-design §5.3）：写面归各 App；promote / retract / 收件箱 / 统计 / 设置 / MCP 只给 KB 与 Agent。
+            var privilegedOnly = path is "/v1/promote" or "/v1/retract" or "/v1/promote-batch"
+                or "/v1/inbox" or "/v1/stats" or "/v1/settings/retention" or "/v1/maintain" or "/mcp";
+
+            if (privilegedOnly && !KbService.IsPrivileged(appId))
             {
                 await WriteJsonAsync(response, 403, Error(KbErrorCodes.Forbidden, "该 app 没有这项能力。"))
                     .ConfigureAwait(false);
@@ -241,6 +244,50 @@ public sealed class KbServer : IDisposable
 
                     var result = _service.Resolve(uri ?? string.Empty);
                     await WriteJsonAsync(response, result.Exists ? 200 : 404, result).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/inbox":
+                {
+                    var limit = int.TryParse(request.QueryString["limit"], out var parsed) ? parsed : 100;
+                    await WriteJsonAsync(response, 200, _service.Inbox(limit)).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/promote-batch" when IsPost(request):
+                {
+                    var body = await ReadBodyAsync(request).ConfigureAwait(false);
+                    var payload = KbJson.Deserialize<PromoteBatchRequest>(body)
+                        ?? throw KbException.Invalid("请求体为空。");
+                    await WriteJsonAsync(response, 200, _service.PromoteMany(payload, appId)).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/stats":
+                {
+                    await WriteJsonAsync(response, 200, _service.GetStorageStats()).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/settings/retention" when IsPost(request) || string.Equals(request.HttpMethod, "PUT", StringComparison.OrdinalIgnoreCase):
+                {
+                    var body = await ReadBodyAsync(request).ConfigureAwait(false);
+                    var payload = KbJson.Deserialize<RetentionSettings>(body)
+                        ?? throw KbException.Invalid("请求体为空。");
+                    _service.SaveRetentionSettings(payload, appId);
+                    await WriteJsonAsync(response, 200, _service.GetRetentionSettings()).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/settings/retention":
+                {
+                    await WriteJsonAsync(response, 200, _service.GetRetentionSettings()).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/maintain" when IsPost(request):
+                {
+                    await WriteJsonAsync(response, 200, _service.RunMaintenance()).ConfigureAwait(false);
                     return;
                 }
 

@@ -16,14 +16,18 @@ public sealed partial class KbService
 {
     private readonly KbStore _store;
     private readonly KbBlobStore _blobs;
+    private readonly TimeProvider _time;
 
-    public KbService(KbStore store, KbBlobStore? blobs = null)
+    public KbService(KbStore store, KbBlobStore? blobs = null, TimeProvider? time = null)
     {
         _store = store;
         _blobs = blobs ?? new KbBlobStore(store.Database.DataDirectory);
+        _time = time ?? TimeProvider.System;
     }
 
     public KbStore Store => _store;
+
+    private DateTimeOffset Now => _time.GetUtcNow();
 
     // ---------------------------------------------------------------- 写入面
 
@@ -64,7 +68,7 @@ public sealed partial class KbService
             return KbJson.Deserialize<WriteResult>(cached) ?? throw KbException.Invalid("幂等记录损坏。");
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = Now;
         WriteResult result;
 
         var existing = string.IsNullOrWhiteSpace(source.EntityUri)
@@ -145,7 +149,7 @@ public sealed partial class KbService
                 $"expectedVersion={request.ExpectedVersion}，当前版本 v{current.Seq}。");
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = Now;
         var author = AuthorFor(authenticatedAppId, request.RationaleSource, import: false);
         var rationaleSource = request.RationaleSource ?? RationaleSourceFor(authenticatedAppId);
 
@@ -176,6 +180,7 @@ public sealed partial class KbService
             Kind = request.Kind,
             Title = request.Title,
             Retention = request.Retention,
+            TtlDays = request.TtlDays,
             Rationale = request.Rationale,
             RationaleSource = ownerApp == "sdemo.kb" ? RationaleSource.Import : RationaleSource.Ai,
             Blocks = request.Blocks,
@@ -275,6 +280,14 @@ public sealed partial class KbService
         DateTimeOffset now)
     {
         var docId = KbIds.NewDocId();
+        var expiresAt = ComputeExpiry(
+            retention,
+            request.Kind,
+            ownerApp,
+            request.TtlDays,
+            now,
+            ReadRetentionSettings(session));
+
         var doc = new DocRow(
             docId,
             ToWire(request.Kind),
@@ -287,6 +300,8 @@ public sealed partial class KbService
             null,
             now,
             now,
+            null,
+            expiresAt,
             null);
 
         session.InsertDoc(doc);
@@ -372,6 +387,22 @@ public sealed partial class KbService
         var current = session.GetCurrentVersion(doc.Id)
             ?? throw KbException.NotFound($"文档没有当前版本：{doc.Id}");
         var currentBlocks = session.GetVersionBlocks(current.Id);
+
+        // P4-a 的暂存文档没有 expires_at；首次重投时补上，避免永远不过期。
+        if (string.Equals(doc.Retention, ToWire(RetentionLevel.Staging), StringComparison.Ordinal)
+            && doc.ExpiresAt is null)
+        {
+            var expires = ComputeExpiry(
+                RetentionLevel.Staging,
+                ParseEnum(doc.Kind, KbKind.Note),
+                doc.OwnerApp,
+                request.TtlDays,
+                now,
+                ReadRetentionSettings(session));
+
+            session.SetExpiry(doc.Id, expires);
+            doc = doc with { ExpiresAt = expires };
+        }
 
         if (!string.Equals(doc.Title, title, StringComparison.Ordinal))
         {
@@ -736,18 +767,19 @@ public sealed partial class KbService
         }
     }
 
-    private static void MaybePrune(KbSession session, DocRow doc)
+    private void MaybePrune(KbSession session, DocRow doc)
     {
         if (string.Equals(doc.Kind, ToWire(KbKind.Requirement), StringComparison.Ordinal))
         {
             return;
         }
 
+        var settings = ReadRetentionSettings(session);
         var keep = string.Equals(doc.Retention, ToWire(RetentionLevel.Staging), StringComparison.Ordinal)
-            ? KbConstants.StagingRetentionVersions
-            : KbConstants.DefaultRetentionVersions;
+            ? settings.StagingVersions
+            : settings.NoteVersions;
 
-        session.PruneVersions(doc.Id, keep);
+        session.PruneVersions(doc.Id, Math.Max(1, keep));
     }
 
     // ---------------------------------------------------------------- 校验与映射
@@ -876,3 +908,4 @@ public sealed partial class KbService
         where TEnum : struct, Enum =>
         Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed) ? parsed : fallback;
 }
+

@@ -1,5 +1,7 @@
 namespace SDemo.App.Kb.Storage;
 
+using Microsoft.Data.Sqlite;
+
 /// <summary>
 /// 表结构（kb-design §2.1）。三条硬约束落在 schema 上：
 /// <list type="bullet">
@@ -10,7 +12,7 @@ namespace SDemo.App.Kb.Storage;
 /// </summary>
 public static class KbSchema
 {
-    public const int Version = 1;
+    public const int Version = 2;
 
     public const string Sql = """
         CREATE TABLE IF NOT EXISTS kb_doc (
@@ -25,7 +27,9 @@ public static class KbSchema
             current_version_id TEXT NULL,
             created_at         TEXT NOT NULL,
             updated_at         TEXT NOT NULL,
-            deleted_at         TEXT NULL
+            deleted_at         TEXT NULL,
+            expires_at         TEXT NULL,
+            purged_at          TEXT NULL
         );
         CREATE INDEX IF NOT EXISTS ix_kb_doc_kind ON kb_doc(kind);
         CREATE INDEX IF NOT EXISTS ix_kb_doc_owner ON kb_doc(owner_app, entity_uri);
@@ -158,4 +162,60 @@ public static class KbSchema
             tokenize = 'unicode61 remove_diacritics 2'
         );
         """;
+
+    /// <summary>
+    /// 在旧库上补列。P4-a 的库 user_version=1，没有 expires_at / purged_at；
+    /// 不能靠 CREATE TABLE IF NOT EXISTS 补列，必须 ALTER。
+    /// </summary>
+    public static void Migrate(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        var version = GetUserVersion(connection, transaction);
+
+        if (version < 2)
+        {
+            AddColumnIfMissing(connection, transaction, "kb_doc", "expires_at", "TEXT NULL");
+            AddColumnIfMissing(connection, transaction, "kb_doc", "purged_at", "TEXT NULL");
+        }
+
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version = " + Version + ";";
+        command.ExecuteNonQuery();
+    }
+
+    private static int GetUserVersion(SqliteConnection connection, SqliteTransaction transaction)
+    {
+        using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = "PRAGMA user_version;";
+        return Convert.ToInt32(command.ExecuteScalar(), System.Globalization.CultureInfo.InvariantCulture);
+    }
+
+    private static void AddColumnIfMissing(
+        SqliteConnection connection,
+        SqliteTransaction transaction,
+        string table,
+        string column,
+        string definition)
+    {
+        using var info = connection.CreateCommand();
+        info.Transaction = transaction;
+        info.CommandText = $"PRAGMA table_info({table});";
+
+        using (var reader = info.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+            }
+        }
+
+        using var alter = connection.CreateCommand();
+        alter.Transaction = transaction;
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition};";
+        alter.ExecuteNonQuery();
+    }
 }

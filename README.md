@@ -3,7 +3,7 @@
 **sdemo.kb**：个人文档的版本、差异、检索与引用追溯。只存只找，**不持有模型凭证**。
 
 > 本仓是 [SDemo 主仓](https://github.com/nnbw-liu/SDemo) 的子模块（`Kb/`，主仓根级）。
-> 状态：**P4-a 地基已实现并验收**（2026-11-14）——五件套工程、`SDemo.Kb.slnf`、36 个测试。
+> 状态：**P4-a 地基 + P4-b 保留已实现并验收**（2026-11-14）——五件套工程、`SDemo.Kb.slnf`、49 个测试。
 >
 > **定位**：KB 不是一个应用，而是一块数据面 + 一个查看器。它与 DesktopAgent、DesktopAssembly 同级，**不挂在 `Apps/` 下**——写面是给所有应用用的协议，读面才是产品。
 
@@ -18,9 +18,11 @@
 | 变更理由 `rationale` | `kb_changes` |
 | 引用 `docId@v<seq>#<blockId>` + 影响面反查 | `kb_refs` / `POST /v1/resolve` |
 | AI 写摘要（不调模型） | `kb_annotate` |
+| 暂存 TTL / 回收站 / 引用保护 / 块与原件 GC | 后台维护 / `--maintain` |
+| 待归档收件箱 + 批量归档 + 存储统计 | `/v1/inbox` `/v1/promote-batch` `/v1/stats` |
 | KB 离线时写入不丢 | `KbOutbox` + `KbIngestClient` |
 
-未做：docx / pptx / xlsx / pdf 解析（P4-d）、TTL 与收件箱、KB 界面（P4-b）、向量检索（P4+）。
+未做：docx / pptx / xlsx / pdf 解析（P4-d）、KB 查看器界面（P4-e，[技术 spike](docs/kb-ui-spike.md)）、向量检索（P4+）。
 
 ## 快速开始
 

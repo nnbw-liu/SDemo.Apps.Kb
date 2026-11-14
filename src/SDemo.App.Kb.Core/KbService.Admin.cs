@@ -41,11 +41,23 @@ public sealed partial class KbService
             throw KbException.Invalid("撤销归档可能已被引用，必须二次确认（confirmed=true）。");
         }
 
-        var now = DateTimeOffset.UtcNow;
+        var now = Now;
         session.SetRetention(doc.Id, target, now);
+
+        var expiresAt = target == "staging"
+            ? ComputeExpiry(
+                RetentionLevel.Staging,
+                ParseEnum(doc.Kind, KbKind.Note),
+                doc.OwnerApp,
+                null,
+                now,
+                ReadRetentionSettings(session))
+            : null;
+
+        session.SetExpiry(doc.Id, expiresAt);
         session.WriteAudit(actorApp, "promote", doc.Id, $"{doc.Retention} → {target}");
 
-        var updated = doc with { Retention = target, UpdatedAt = now };
+        var updated = doc with { Retention = target, UpdatedAt = now, ExpiresAt = expiresAt };
         MaybePrune(session, updated);
 
         var version = session.GetCurrentVersion(doc.Id);
@@ -84,7 +96,7 @@ public sealed partial class KbService
 
         if (doc.DeletedAt is null)
         {
-            var now = DateTimeOffset.UtcNow;
+            var now = Now;
             session.SetDeleted(doc.Id, now);
             result.DeletedAt = now;
             session.WriteAudit(actorApp, "retract", doc.Id, request.Reason ?? string.Empty);
@@ -125,7 +137,7 @@ public sealed partial class KbService
             throw new KbException(KbErrorCodes.VersionNotFound, "版本不属于该文档。");
         }
 
-        session.UpsertAnnotation(doc.Id, version.Id, request.Summary.Trim(), author, DateTimeOffset.UtcNow);
+        session.UpsertAnnotation(doc.Id, version.Id, request.Summary.Trim(), author, Now);
         session.Commit();
     }
 
@@ -150,7 +162,7 @@ public sealed partial class KbService
         var hash = HashToken(token);
 
         using var session = _store.Begin();
-        session.UpsertToken(appId.Trim(), hash, DateTimeOffset.UtcNow);
+        session.UpsertToken(appId.Trim(), hash, Now);
         session.WriteAudit("sdemo.kb", "token.issue", null, appId.Trim());
         session.Commit();
 
@@ -173,3 +185,4 @@ public sealed partial class KbService
         Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(
             System.Text.Encoding.UTF8.GetBytes(token)));
 }
+

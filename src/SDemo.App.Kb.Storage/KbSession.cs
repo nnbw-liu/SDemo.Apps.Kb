@@ -41,7 +41,7 @@ public sealed class KbSession : IDisposable
         using var command = Command(
             """
             SELECT id, kind, title, owner_app, entity_uri, uri, retention, derived_state,
-                   current_version_id, created_at, updated_at, deleted_at
+                   current_version_id, created_at, updated_at, deleted_at, expires_at, purged_at
             FROM kb_doc WHERE id = $id
             """,
             ("$id", docId));
@@ -61,7 +61,7 @@ public sealed class KbSession : IDisposable
         using var command = Command(
             """
             SELECT id, kind, title, owner_app, entity_uri, uri, retention, derived_state,
-                   current_version_id, created_at, updated_at, deleted_at
+                   current_version_id, created_at, updated_at, deleted_at, expires_at, purged_at
             FROM kb_doc
             WHERE owner_app = $owner AND entity_uri = $entity
             ORDER BY created_at ASC
@@ -77,9 +77,9 @@ public sealed class KbSession : IDisposable
     public void InsertDoc(DocRow row) => Execute(
         """
         INSERT INTO kb_doc (id, kind, title, owner_app, entity_uri, uri, retention, derived_state,
-                            current_version_id, created_at, updated_at, deleted_at)
+                            current_version_id, created_at, updated_at, deleted_at, expires_at, purged_at)
         VALUES ($id, $kind, $title, $owner, $entity, $uri, $retention, $derived,
-                $current, $created, $updated, $deleted)
+                $current, $created, $updated, $deleted, $expires, $purged)
         """,
         ("$id", row.Id),
         ("$kind", row.Kind),
@@ -92,7 +92,9 @@ public sealed class KbSession : IDisposable
         ("$current", row.CurrentVersionId),
         ("$created", Format(row.CreatedAt)),
         ("$updated", Format(row.UpdatedAt)),
-        ("$deleted", row.DeletedAt is { } deleted ? Format(deleted) : null));
+        ("$deleted", row.DeletedAt is { } deleted ? Format(deleted) : null),
+        ("$expires", row.ExpiresAt is { } expires ? Format(expires) : null),
+        ("$purged", row.PurgedAt is { } purged ? Format(purged) : null));
 
     public void SetCurrentVersion(string docId, string versionId, DateTimeOffset updatedAt) => Execute(
         "UPDATE kb_doc SET current_version_id = $version, updated_at = $updated WHERE id = $id",
@@ -115,6 +117,225 @@ public sealed class KbSession : IDisposable
         "UPDATE kb_doc SET deleted_at = NULL WHERE id = $id",
         ("$id", docId));
 
+    public void SetExpiry(string docId, DateTimeOffset? expiresAt) => Execute(
+        "UPDATE kb_doc SET expires_at = $expires WHERE id = $id",
+        ("$expires", expiresAt is { } value ? Format(value) : null),
+        ("$id", docId));
+
+    /// <summary>回收站到期后的墓碑标记：保留 doc 行让旧引用仍能 resolve 成「已删除」。</summary>
+    public void MarkPurged(string docId, DateTimeOffset at) => Execute(
+        "UPDATE kb_doc SET purged_at = $at, current_version_id = NULL WHERE id = $id",
+        ("$at", Format(at)),
+        ("$id", docId));
+
+    public IReadOnlyList<DocRow> ListExpired(DateTimeOffset now)
+    {
+        using var command = Command(
+            """
+            SELECT id, kind, title, owner_app, entity_uri, uri, retention, derived_state,
+                   current_version_id, created_at, updated_at, deleted_at, expires_at, purged_at
+            FROM kb_doc
+            WHERE deleted_at IS NULL AND purged_at IS NULL
+              AND expires_at IS NOT NULL AND expires_at <= $now
+            ORDER BY expires_at ASC
+            """,
+            ("$now", Format(now)));
+
+        using var reader = command.ExecuteReader();
+        var rows = new List<DocRow>();
+        while (reader.Read())
+        {
+            rows.Add(ReadDoc(reader));
+        }
+
+        return rows;
+    }
+
+    public IReadOnlyList<DocRow> ListPurgeable(DateTimeOffset deletedBefore)
+    {
+        using var command = Command(
+            """
+            SELECT id, kind, title, owner_app, entity_uri, uri, retention, derived_state,
+                   current_version_id, created_at, updated_at, deleted_at, expires_at, purged_at
+            FROM kb_doc
+            WHERE deleted_at IS NOT NULL AND purged_at IS NULL AND deleted_at <= $before
+            ORDER BY deleted_at ASC
+            """,
+            ("$before", Format(deletedBefore)));
+
+        using var reader = command.ExecuteReader();
+        var rows = new List<DocRow>();
+        while (reader.Read())
+        {
+            rows.Add(ReadDoc(reader));
+        }
+
+        return rows;
+    }
+
+    public int PurgeDocVersions(string docId)
+    {
+        Execute(
+            "DELETE FROM kb_block_edge WHERE version_id IN (SELECT id FROM kb_version WHERE doc_id = $doc)",
+            ("$doc", docId));
+
+        using var command = Command("DELETE FROM kb_version WHERE doc_id = $doc", ("$doc", docId));
+        return command.ExecuteNonQuery();
+    }
+
+    public int DeleteAnnotations(string docId) => Execute(
+        "DELETE FROM kb_annotation WHERE doc_id = $doc",
+        ("$doc", docId));
+
+    public int DeleteBlobRefs(string docId) => Execute(
+        "DELETE FROM kb_blob_ref WHERE doc_id = $doc",
+        ("$doc", docId));
+
+    /// <summary>块 GC：没有任何版本边、也没有被引用指向的块才回收；引用保护是硬底线。</summary>
+    public int CollectUnreferencedBlocks()
+    {
+        var ids = new List<string>();
+        using (var command = Command(
+            """
+            SELECT b.id FROM kb_block b
+            WHERE NOT EXISTS (SELECT 1 FROM kb_block_edge e WHERE e.block_id = b.id)
+              AND NOT EXISTS (SELECT 1 FROM kb_link l WHERE l.target_block_id = b.id)
+            """))
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                ids.Add(reader.GetString(0));
+            }
+        }
+
+        foreach (var id in ids)
+        {
+            Execute("DELETE FROM kb_fts WHERE block_id = $id", ("$id", id));
+            Execute("DELETE FROM kb_block WHERE id = $id", ("$id", id));
+        }
+
+        return ids.Count;
+    }
+
+    public IReadOnlyList<BlobRow> CollectUnreferencedBlobs()
+    {
+        var rows = new List<BlobRow>();
+        using (var command = Command(
+            """
+            SELECT b.sha256, b.mime, b.size, b.name, b.stored_path
+            FROM kb_blob b
+            WHERE NOT EXISTS (SELECT 1 FROM kb_blob_ref r WHERE r.blob_sha = b.sha256)
+            """))
+        using (var reader = command.ExecuteReader())
+        {
+            while (reader.Read())
+            {
+                rows.Add(new BlobRow(
+                    reader.GetString(0),
+                    reader.IsDBNull(1) ? null : reader.GetString(1),
+                    reader.GetInt64(2),
+                    reader.IsDBNull(3) ? null : reader.GetString(3),
+                    reader.IsDBNull(4) ? null : reader.GetString(4)));
+            }
+        }
+
+        foreach (var row in rows)
+        {
+            Execute("DELETE FROM kb_blob WHERE sha256 = $sha", ("$sha", row.Sha256));
+        }
+
+        return rows;
+    }
+
+    public IReadOnlyList<InboxRow> ListStaging(int limit)
+    {
+        using var command = Command(
+            """
+            SELECT d.id, d.kind, d.title, d.owner_app, d.entity_uri, d.uri, d.retention, d.derived_state,
+                   d.current_version_id, d.created_at, d.updated_at, d.deleted_at, d.expires_at, d.purged_at,
+                   COALESCE(v.seq, 0),
+                   (SELECT COUNT(*) FROM kb_block_edge e WHERE e.version_id = d.current_version_id),
+                   (SELECT COALESCE(SUM(LENGTH(b.text)), 0)
+                      FROM kb_block_edge e JOIN kb_block b ON b.id = e.block_id
+                     WHERE e.version_id = d.current_version_id),
+                   (SELECT COALESCE(SUM(bl.size), 0)
+                      FROM kb_blob_ref r JOIN kb_blob bl ON bl.sha256 = r.blob_sha
+                     WHERE r.doc_id = d.id)
+            FROM kb_doc d
+            LEFT JOIN kb_version v ON v.id = d.current_version_id
+            WHERE d.deleted_at IS NULL AND d.retention = 'staging' AND d.purged_at IS NULL
+            ORDER BY CASE WHEN d.expires_at IS NULL THEN 1 ELSE 0 END, d.expires_at ASC, d.updated_at DESC
+            LIMIT $limit
+            """,
+            ("$limit", Math.Clamp(limit, 1, 500)));
+
+        using var reader = command.ExecuteReader();
+        var rows = new List<InboxRow>();
+        while (reader.Read())
+        {
+            rows.Add(new InboxRow(
+                ReadDoc(reader),
+                reader.GetInt32(14),
+                reader.GetInt32(15),
+                reader.GetInt64(16),
+                reader.GetInt64(17)));
+        }
+
+        return rows;
+    }
+
+    public int CountStaging()
+    {
+        using var command = Command("SELECT COUNT(*) FROM kb_doc WHERE deleted_at IS NULL AND retention = 'staging'");
+        return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    public int CountExpiringSoon(DateTimeOffset threshold)
+    {
+        using var command = Command(
+            """
+            SELECT COUNT(*) FROM kb_doc
+            WHERE deleted_at IS NULL AND retention = 'staging'
+              AND expires_at IS NOT NULL AND expires_at <= $threshold
+            """,
+            ("$threshold", Format(threshold)));
+        return Convert.ToInt32(command.ExecuteScalar(), CultureInfo.InvariantCulture);
+    }
+
+    public StorageCounters GetCounters()
+    {
+        using var command = Command(
+            """
+            SELECT
+              (SELECT COUNT(*) FROM kb_doc WHERE deleted_at IS NULL),
+              (SELECT COUNT(*) FROM kb_doc WHERE deleted_at IS NULL AND retention = 'staging'),
+              (SELECT COUNT(*) FROM kb_doc WHERE deleted_at IS NOT NULL AND purged_at IS NULL),
+              (SELECT COUNT(*) FROM kb_block),
+              (SELECT COUNT(*) FROM kb_version),
+              (SELECT COALESCE(SUM(LENGTH(text)), 0) FROM kb_block),
+              (SELECT COALESCE(SUM(size), 0) FROM kb_blob),
+              (SELECT COALESCE(SUM(b.size), 0) FROM kb_blob b
+                WHERE NOT EXISTS (SELECT 1 FROM kb_blob_ref r WHERE r.blob_sha = b.sha256))
+            """);
+
+        using var reader = command.ExecuteReader();
+        if (!reader.Read())
+        {
+            return new StorageCounters(0, 0, 0, 0, 0, 0, 0, 0);
+        }
+
+        return new StorageCounters(
+            reader.GetInt32(0),
+            reader.GetInt32(1),
+            reader.GetInt32(2),
+            reader.GetInt32(3),
+            reader.GetInt32(4),
+            reader.GetInt64(5),
+            reader.GetInt64(6),
+            reader.GetInt64(7));
+    }
+
     public void UpdateTitle(string docId, string title, DateTimeOffset updatedAt) => Execute(
         "UPDATE kb_doc SET title = $title, updated_at = $updated WHERE id = $id",
         ("$title", title),
@@ -126,7 +347,7 @@ public sealed class KbSession : IDisposable
         using var command = Command(
             $"""
             SELECT id, kind, title, owner_app, entity_uri, uri, retention, derived_state,
-                   current_version_id, created_at, updated_at, deleted_at
+                   current_version_id, created_at, updated_at, deleted_at, expires_at, purged_at
             FROM kb_doc
             {(includeDeleted ? string.Empty : "WHERE deleted_at IS NULL")}
             ORDER BY updated_at DESC
@@ -879,10 +1100,10 @@ public sealed class KbSession : IDisposable
         return command;
     }
 
-    private void Execute(string sql, params (string Name, object? Value)[] parameters)
+    private int Execute(string sql, params (string Name, object? Value)[] parameters)
     {
         using var command = Command(sql, parameters);
-        command.ExecuteNonQuery();
+        return command.ExecuteNonQuery();
     }
 
     private IReadOnlyList<LinkRow> ReadLinks(SqliteCommand command)
@@ -920,7 +1141,9 @@ public sealed class KbSession : IDisposable
         reader.IsDBNull(8) ? null : reader.GetString(8),
         ParseDate(reader.GetString(9)),
         ParseDate(reader.GetString(10)),
-        reader.IsDBNull(11) ? null : ParseDate(reader.GetString(11)));
+        reader.IsDBNull(11) ? null : ParseDate(reader.GetString(11)),
+        reader.IsDBNull(12) ? null : ParseDate(reader.GetString(12)),
+        reader.IsDBNull(13) ? null : ParseDate(reader.GetString(13)));
 
     private static VersionRow ReadVersion(SqliteDataReader reader) => new(
         reader.GetString(0),

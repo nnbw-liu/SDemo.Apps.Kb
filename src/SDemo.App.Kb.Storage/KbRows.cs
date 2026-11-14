@@ -13,9 +13,13 @@ public sealed record DocRow(
     string? CurrentVersionId,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    DateTimeOffset? DeletedAt)
+    DateTimeOffset? DeletedAt,
+    DateTimeOffset? ExpiresAt,
+    DateTimeOffset? PurgedAt)
 {
     public bool IsDeleted => DeletedAt is not null;
+
+    public bool IsPurged => PurgedAt is not null;
 }
 
 public sealed record VersionRow(
@@ -94,3 +98,22 @@ public sealed record ChangeSearchRow(
     string? RationaleSource,
     DateTimeOffset CreatedAt,
     double Rank);
+
+public sealed record InboxRow(
+    DocRow Doc,
+    int VersionSeq,
+    int BlockCount,
+    long TextChars,
+    long BlobBytes);
+
+public sealed record BlobRow(string Sha256, string? Mime, long Size, string? Name, string? StoredPath);
+
+public sealed record StorageCounters(
+    int Docs,
+    int Staging,
+    int Trash,
+    int Blocks,
+    int Versions,
+    long TextChars,
+    long BlobBytes,
+    long ReclaimableBlobBytes);

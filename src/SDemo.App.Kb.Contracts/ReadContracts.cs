@@ -55,6 +55,9 @@ public sealed class DocSummary
 
     public DateTimeOffset? DeletedAt { get; set; }
 
+    /// <summary>staging 的到期时间；durable 为 null。</summary>
+    public DateTimeOffset? ExpiresAt { get; set; }
+
     public int BlockCount { get; set; }
 }
 

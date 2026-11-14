@@ -48,6 +48,9 @@ public sealed class IngestRequest
     /// <summary>缺省由 kind 决定：requirement → durable，其余 → staging（kb-design §4.2）。</summary>
     public RetentionLevel? Retention { get; set; }
 
+    /// <summary>staging 的 TTL 覆盖（天）；缺省按来源取策略。AI 摘要可传 7，图片可传 30。</summary>
+    public int? TtlDays { get; set; }
+
     public string? Rationale { get; set; }
 
     public RationaleSource? RationaleSource { get; set; }
@@ -171,6 +174,8 @@ public sealed class KbCreateRequest
     public string Title { get; set; } = string.Empty;
 
     public RetentionLevel? Retention { get; set; }
+
+    public int? TtlDays { get; set; }
 
     public string? Rationale { get; set; }
 

@@ -96,4 +96,59 @@ public sealed class HttpWriteSurfaceTests
 
         Assert.Equal(HttpStatusCode.NotFound, resolve.StatusCode);
     }
+
+    [Fact]
+    public async Task 收件箱统计设置与批量归档走回环接口()
+    {
+        using var kb = new TestKb(DateTimeOffset.UtcNow);
+        var staged = kb.CreateStaging("待归档", ["内容"], ttlDays: 5);
+
+        using var server = new KbServer(kb.Service);
+        server.Start();
+        using var client = Client(server, kb.Token);
+
+        var inbox = await client.GetFromJsonAsync<InboxResult>("/v1/inbox", KbJson.Wire);
+        Assert.NotNull(inbox);
+        Assert.Equal(1, inbox!.Total);
+        Assert.Single(inbox.Items);
+
+        var stats = await client.GetFromJsonAsync<StorageStats>("/v1/stats", KbJson.Wire);
+        Assert.NotNull(stats);
+        Assert.Equal(1, stats!.StagingCount);
+
+        var settings = await client.GetFromJsonAsync<RetentionSettings>("/v1/settings/retention", KbJson.Wire);
+        Assert.NotNull(settings);
+        settings!.AgentTtlDays = 3;
+        var put = await client.PutAsJsonAsync("/v1/settings/retention", settings, KbJson.Wire);
+        Assert.Equal(HttpStatusCode.OK, put.StatusCode);
+        var saved = await put.Content.ReadFromJsonAsync<RetentionSettings>(KbJson.Wire);
+        Assert.Equal(3, saved!.AgentTtlDays);
+
+        var batch = await client.PostAsJsonAsync(
+            "/v1/promote-batch",
+            new PromoteBatchRequest
+            {
+                DocIds = [staged.DocId],
+                Retention = RetentionLevel.Durable,
+            },
+            KbJson.Wire);
+        Assert.Equal(HttpStatusCode.OK, batch.StatusCode);
+        var promoted = await batch.Content.ReadFromJsonAsync<PromoteBatchResult>(KbJson.Wire);
+        Assert.Single(promoted!.Promoted);
+        Assert.Empty(promoted.Failed);
+    }
+
+    [Fact]
+    public async Task 普通App不能读收件箱()
+    {
+        using var kb = new TestKb();
+        using var server = new KbServer(kb.Service);
+        server.Start();
+
+        var appToken = kb.Service.IssueToken("sdemo.meeting");
+        using var client = Client(server, appToken);
+
+        var inbox = await client.GetAsync("/v1/inbox");
+        Assert.Equal(HttpStatusCode.Forbidden, inbox.StatusCode);
+    }
 }

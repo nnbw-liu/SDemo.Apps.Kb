@@ -60,12 +60,7 @@ public sealed class KbDatabase
             command.ExecuteNonQuery();
         }
 
-        using (var command = connection.CreateCommand())
-        {
-            command.Transaction = transaction;
-            command.CommandText = "PRAGMA user_version = " + KbSchema.Version + ";";
-            command.ExecuteNonQuery();
-        }
+        KbSchema.Migrate(connection, transaction);
 
         transaction.Commit();
     }
