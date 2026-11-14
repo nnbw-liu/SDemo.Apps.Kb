@@ -43,10 +43,7 @@ public sealed class ImportTextTests
     {
         using var kb = new TestKb();
 
-        var error = Assert.Throws<KbException>(() => kb.Service.ImportText("x.pdf", "not a pdf"));
-
-        Assert.Equal(KbErrorCodes.InvalidRequest, error.Code);
-        Assert.Contains("P4-d", error.Message);
+        Assert.Throws<KbException>(() => kb.Service.ImportText("x.pdf", "not a pdf"));
     }
 
     [Fact]

@@ -55,12 +55,13 @@ src/SDemo.App.Kb.Host      net10.0            保持无界面数据面 + CLI（�
 - 七屏可打开：01 全部文档、02 文档详情、03 版本对比、04 待归档、05 导入、06 检索、07 设置。
 - 阅读正文、版本链、引用与变更理由、待归档批量归档、检索结果与 `hitTerms`。
 - 版本对比的块级摘要 + 词级高亮 + rationale 卡片；设置页读写保留策略、存储统计、重建索引与 token 目录提示。
+- 导入页文件选择支持 md / txt / docx / pptx / xlsx / 文字层 pdf；单文件 100 MB 上限；anchor 位置在块右侧显示。
 - 块编辑进入编辑态；保存走 `kb_update`（`expectedVersion` 冲突提示）。
 - 窗口进程同时提供 `/v1/health`，runtime 文件能写回。
 
 仍未做：
 
-- 05 导入的 docx / pptx / xlsx / pdf（P4-d），以及拖拽入队（目前是文件选择）。
-- 深/浅色主题的逐屏像素校验、1440×900 截图回归。
+- 扫描件 pdf / 图片的 OCR 与 `derived_state=pending`（P4-d 尾）。
+- 拖拽入队（目前是文件选择）；深/浅色主题的逐屏像素校验、1440×900 截图回归。
 - 无 WebView2 运行时机器上的引导安装（需要 bootstrapper 或安装器检查）。
 

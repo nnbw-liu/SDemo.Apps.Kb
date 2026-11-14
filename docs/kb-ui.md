@@ -1,6 +1,6 @@
 # sdemo.kb 界面设计
 
-> 状态：**P4-e 七屏已实现（01 / 02 / 03 / 04 / 05 / 06 / 07）；05 导入首版仅 md / txt（2026-11-14）**。
+> 状态：**P4-e 七屏已实现（01 / 02 / 03 / 04 / 05 / 06 / 07）；05 导入支持 md / txt / docx / pptx / xlsx / 文字层 pdf（2026-11-14）**。
 > 配套：[kb-design.md](kb-design.md)（完整设计）· [ui-mockups/](ui-mockups/)（可打开的原型）· [kb-ui-spike.md](kb-ui-spike.md)（技术落地）
 > 依赖：[SDemo.Shared 设计系统](../../Shared/UI/SDemo.UI.Blazor/wwwroot/css/sdemo-ui.css)
 

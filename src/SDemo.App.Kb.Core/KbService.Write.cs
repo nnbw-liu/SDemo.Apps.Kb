@@ -225,13 +225,34 @@ public sealed partial class KbService
             System.Security.Cryptography.SHA256.HashData(
                 System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToLowerInvariant())));
 
-        return ImportCore(key, Path.GetFileName(path), File.ReadAllText(path), title, kind, rationale);
+        using var stream = File.OpenRead(path);
+        return ImportStream(key, Path.GetFileName(path), stream, title, kind, rationale);
     }
 
     /// <summary>
-    /// 从界面（BlazorWebView 文件选择）导入：没有本机路径，只按文件名做幂等键；
-    /// 同名文件重新导入会按块 diff 生成新版本。
+    /// 从界面导入：没有本机路径，只按文件名做幂等键；同名文件重新导入会按块 diff 生成新版本。
     /// </summary>
+    public WriteResult ImportContent(
+        string fileName,
+        byte[] content,
+        string? title = null,
+        KbKind kind = KbKind.Reference,
+        string? rationale = null)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            throw KbException.Invalid("文件名不能为空。");
+        }
+
+        if (content.Length == 0)
+        {
+            throw KbException.Invalid("文件没有可导入的内容。");
+        }
+
+        using var stream = new MemoryStream(content, writable: false);
+        return ImportStream(NameKey(fileName), Path.GetFileName(fileName), stream, title, kind, rationale);
+    }
+
     public WriteResult ImportText(
         string fileName,
         string content,
@@ -249,29 +270,24 @@ public sealed partial class KbService
             throw KbException.Invalid("文件没有可导入的文本。");
         }
 
-        var name = Path.GetFileName(fileName);
-        var key = Convert.ToHexStringLower(
-            System.Security.Cryptography.SHA256.HashData(
-                System.Text.Encoding.UTF8.GetBytes(("name:" + name.ToLowerInvariant()).ToLowerInvariant())));
-
-        return ImportCore(key, name, content, title, kind, rationale);
+        var bytes = System.Text.Encoding.UTF8.GetBytes(content);
+        return ImportContent(fileName, bytes, title, kind, rationale);
     }
 
-    private WriteResult ImportCore(
+    private static string NameKey(string fileName) =>
+        Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes("name:" + Path.GetFileName(fileName).ToLowerInvariant())));
+
+    private WriteResult ImportStream(
         string key,
         string fileName,
-        string content,
+        Stream stream,
         string? title,
         KbKind kind,
         string? rationale)
     {
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
-        if (extension is ".docx" or ".pdf" or ".pptx" or ".xlsx")
-        {
-            throw KbException.Invalid($"P4-a 先支持 md / txt；{extension} 在 P4-d 接入。");
-        }
-
-        var specs = KbBlockSplitter.SplitByExtension(fileName, content);
+        var specs = KbDocumentImporter.Extract(fileName, stream);
         if (specs.Count == 0)
         {
             throw KbException.Invalid("文件没有可导入的文本块。");

@@ -79,7 +79,13 @@ else
                 @foreach (var block in _content.Blocks)
                 {
                     <div class="blk @(block.BlockId == FocusBlockId ? "blk-target" : null)">
-                        <span class="blk-anchor">@KbUi.BlockAnchor(block)</span>
+                        <span class="blk-anchor">
+                            @KbUi.BlockAnchor(block)
+                            @if (KbUi.AnchorLabel(block.AnchorJson) is { Length: > 0 } anchorLabel)
+                            {
+                                <text> · @anchorLabel</text>
+                            }
+                        </span>
 
                         @if (_editingBlockId == block.BlockId)
                         {

@@ -1,4 +1,5 @@
 using SDemo.App.Kb.Contracts;
+using System.Text.Json;
 
 namespace SDemo.App.Kb.Web;
 
@@ -123,6 +124,38 @@ public static class KbUi
 
     public static string BlockAnchor(BlockView block) =>
         $"#{ShortId(block.BlockId)} · 第 {block.Ordinal + 1} 块";
+
+    /// <summary>把 anchor JSON 变成人能读的位置提示；解析失败时回退为空。</summary>
+    public static string AnchorLabel(string? anchorJson)
+    {
+        if (string.IsNullOrWhiteSpace(anchorJson))
+        {
+            return string.Empty;
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(anchorJson);
+            var root = document.RootElement;
+            var kind = root.GetProperty("kind").GetString();
+            var value = root.GetProperty("value");
+
+            return kind switch
+            {
+                "offset" => $"字符 {value.GetProperty("start").GetInt32()}–{value.GetProperty("end").GetInt32()}",
+                "para" => $"第 {value.GetProperty("index").GetInt32()} 段",
+                "slide" => $"第 {value.GetProperty("index").GetInt32()} 页",
+                "page" => $"第 {value.GetProperty("page").GetInt32()} 页",
+                "sheet" => $"{value.GetProperty("sheet").GetString()}!{value.GetProperty("range").GetString()}",
+                "region" => "图片区域",
+                _ => string.Empty,
+            };
+        }
+        catch (Exception)
+        {
+            return string.Empty;
+        }
+    }
 }
 
 

@@ -5,18 +5,18 @@
     <div class="page-head">
         <div>
             <h2>导入</h2>
-            <p class="muted">md / txt 导入即建 v1；同名文件再次导入按块 diff 建新版本。docx / pdf 在 P4-d 接入。</p>
+            <p class="muted">md / txt / docx / pptx / xlsx / 文字层 pdf 导入即建 v1；同名文件再次导入按块 diff 建新版本。</p>
         </div>
     </div>
 
     <div class="import-drop">
         <Icons Name="plus" />
-        <h3>选择 Markdown 或纯文本文件</h3>
-        <p class="muted">点下面的按钮选择文件；单文件上限 5 MB。</p>
+        <h3>选择文档文件</h3>
+        <p class="muted">支持 md / txt / docx / pptx / xlsx / pdf；单文件上限 100 MB。</p>
 
         <label class="btn btn-primary btn-sm import-pick">
             选择文件
-            <InputFile OnChange="OnFileSelected" multiple accept=".md,.markdown,.txt" />
+            <InputFile OnChange="OnFileSelected" multiple accept=".md,.markdown,.txt,.docx,.pptx,.xlsx,.pdf" />
         </label>
 
         <div class="import-kind">
@@ -80,7 +80,7 @@
 </div>
 
 @code {
-    private const long MaxBytes = 5 * 1024 * 1024;
+    private const long MaxBytes = 100 * 1024 * 1024;
     private readonly List<ImportItem> _items = [];
     private string _kindText = "reference";
     private bool _busy;
@@ -109,21 +109,22 @@
                 }
 
                 var extension = Path.GetExtension(file.Name).ToLowerInvariant();
-                if (extension is not (".md" or ".markdown" or ".txt"))
+                if (extension is not (".md" or ".markdown" or ".txt" or ".docx" or ".pptx" or ".xlsx" or ".pdf"))
                 {
-                    _items[0].Detail = "P4-d 才支持该格式";
+                    _items[0].Detail = "不支持的格式";
                     continue;
                 }
 
                 try
                 {
                     await using var stream = file.OpenReadStream(MaxBytes);
-                    using var reader = new StreamReader(stream);
-                    var content = await reader.ReadToEndAsync();
+                    using var buffer = new MemoryStream();
+                    await stream.CopyToAsync(buffer);
                     var kind = ParseKind(_kindText);
-                    var result = await Task.Run(() => Kb.ImportText(
+                    var bytes = buffer.ToArray();
+                    var result = await Task.Run(() => Kb.ImportContent(
                         file.Name,
-                        content,
+                        bytes,
                         kind: kind,
                         rationale: "查看器导入"));
 
@@ -176,3 +177,4 @@
         public int Seq { get; set; }
     }
 }
+
