@@ -142,11 +142,20 @@ public sealed partial class KbService
         var current = session.GetCurrentVersion(doc.Id)
             ?? throw KbException.NotFound($"文档没有当前版本：{doc.Id}");
 
+        var baseVersion = current;
         if (request.ExpectedVersion is > 0 && request.ExpectedVersion != current.Seq)
         {
-            throw new KbException(
-                KbErrorCodes.VersionConflict,
-                $"expectedVersion={request.ExpectedVersion}，当前版本 v{current.Seq}。");
+            if (!request.AllowBranch)
+            {
+                throw new KbException(
+                    KbErrorCodes.VersionConflict,
+                    $"expectedVersion={request.ExpectedVersion}，当前版本 v{current.Seq}。");
+            }
+
+            baseVersion = session.GetVersionBySeq(doc.Id, request.ExpectedVersion.Value)
+                ?? throw new KbException(
+                    KbErrorCodes.VersionNotFound,
+                    $"没有 v{request.ExpectedVersion}，无法拉分支。");
         }
 
         var now = Now;
@@ -156,7 +165,7 @@ public sealed partial class KbService
         var result = ApplyOpsCore(
             session,
             doc,
-            current,
+            baseVersion,
             request.Blocks,
             request.Links,
             request.Reason,
@@ -206,6 +215,7 @@ public sealed partial class KbService
             Rationale = request.Rationale,
             RationaleSource = request.RationaleSource,
             NamedVersion = request.NamedVersion,
+            AllowBranch = request.AllowBranch,
             Blocks = request.Ops,
         };
 
@@ -762,7 +772,7 @@ public sealed partial class KbService
         string? namedVersion = null,
         IReadOnlyList<string>? extraParents = null)
     {
-        var seq = current.Seq + 1;
+        var seq = session.GetMaxSeq(doc.Id) + 1;
         var version = new VersionRow(
             KbIds.NewVersionId(),
             doc.Id,

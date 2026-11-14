@@ -489,8 +489,7 @@ public sealed class KbSession : IDisposable
         ("$parent", parentId),
         ("$ordinal", ordinal));
 
-    public IReadOnlyList<string> GetParentIds(string versionId)
-    {
+    public IReadOnlyList<string> GetParentIds(string versionId)    {
         using var command = Command(
             "SELECT parent_id FROM kb_version_parent WHERE version_id = $version ORDER BY ordinal ASC",
             ("$version", versionId));

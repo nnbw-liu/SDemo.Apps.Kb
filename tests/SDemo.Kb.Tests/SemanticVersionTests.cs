@@ -74,6 +74,61 @@ public sealed class SemanticVersionTests
     }
 
     [Fact]
+    public void 从旧版本拉分支再合并两个分支()
+    {
+        using var kb = new TestKb();
+        var created = kb.Ingest("需求", ["A"], kind: KbKind.Requirement);
+
+        var branch1 = kb.Service.Revise(
+            new ReviseRequest
+            {
+                Source = new IngestSource { AppId = KbConstants.AppId },
+                DocId = created.DocId,
+                ExpectedVersion = 1,
+                AllowBranch = true,
+                NamedVersion = "v1.1",
+                Blocks = [new BlockInput { Op = ChangeOp.Replace, BlockId = created.BlockIds[0], Text = "A-左" }],
+            },
+            KbConstants.AppId);
+
+        var branch2 = kb.Service.Revise(
+            new ReviseRequest
+            {
+                Source = new IngestSource { AppId = KbConstants.AppId },
+                DocId = created.DocId,
+                ExpectedVersion = 1,
+                AllowBranch = true,
+                NamedVersion = "v1.2",
+                Blocks = [new BlockInput { Op = ChangeOp.Replace, BlockId = created.BlockIds[0], Text = "A-右" }],
+            },
+            KbConstants.AppId);
+
+        var versions = kb.Service.History(created.DocId);
+        Assert.Single(versions.Single(version => version.Seq == 2).ParentVersionIds);
+        Assert.Single(versions.Single(version => version.Seq == 3).ParentVersionIds);
+        Assert.Equal("v1.1", branch1.NamedVersion);
+        Assert.Equal("v1.2", branch2.NamedVersion);
+
+        var merged = kb.Service.Merge(
+            new KbMergeRequest
+            {
+                DocId = created.DocId,
+                LeftVersion = 2,
+                RightVersion = 3,
+                ExpectedVersion = 3,
+                NamedVersion = "v2.0",
+                Rationale = "拉分支后合并",
+                Blocks = [new BlockInput { Op = ChangeOp.Add, Text = "A-合并" }],
+            },
+            KbConstants.AppId);
+
+        Assert.Equal(4, merged.Seq);
+        var mergeVersion = kb.Service.History(created.DocId).Single(version => version.Seq == 4);
+        Assert.Equal(2, mergeVersion.ParentVersionIds.Count);
+        Assert.Equal("v2.0", mergeVersion.NamedVersion);
+    }
+
+    [Fact]
     public void 合并生成双父版本并保留语义版本()
     {
         using var kb = new TestKb();
@@ -118,3 +173,4 @@ public sealed class SemanticVersionTests
         Assert.Contains(versions.Single(version => version.Seq == 2).VersionId, mergeVersion.ParentVersionIds);
     }
 }
+

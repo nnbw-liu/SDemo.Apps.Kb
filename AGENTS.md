@@ -20,12 +20,12 @@
 
 ## 现状（2026-11-14）
 
-✅ **P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 76 个测试。
+✅ **P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 77 个测试。
 
 | 已做 | 说明 |
 | --- | --- |
 | 版本链 | `kb_doc` / `kb_version`（DAG，`parent_id` 可分叉 + `kb_version_parent` 多父）/ `kb_block` / `kb_block_edge`；版本只增不改 |
-| **语义版本** | requirement 从 v1.0 开始，缺省 minor 递增；写面/MCP 可显式 v2.0，但必须严格大于当前；普通文档不能命名 |
+| **语义版本** | requirement 从 v1.0 开始，缺省 minor 递增；写面/MCP 可显式 v2.0，但必须严格大于当前；`allowBranch` 可从旧版本拉分支再合并；普通文档不能命名 |
 | 块级内容寻址 | 空白/换行归一化后 hash；同文档同 hash 复用块；`content_hash` 相同直接跳过，不建版本 |
 | 三索引面 + 路由 | 当前态 / 历史态 / 变更事实（+ 暂存需 `scope=recent`）；关键词路由「现在 / 以前 / 为什么 / 最近」 |
 | 中文检索 | FTS5 + 2-gram 预分词；`hitTerms` / `noHit` 随结果返回 |
@@ -180,6 +180,7 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 ## 不要读
 
 `obj/`、`bin/`、`TestResults/`、模型/索引缓存；`docs/requirements.md` 只通读一次。
+
 
 
 

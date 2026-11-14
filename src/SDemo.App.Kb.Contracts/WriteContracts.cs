@@ -90,6 +90,9 @@ public sealed class ReviseRequest
     /// <summary>requirement 的语义版本名（如 v1.1 / v2.0）；缺省自动 minor。</summary>
     public string? NamedVersion { get; set; }
 
+    /// <summary>expectedVersion 指向旧版本时，允许从该版本拉分支（多端合并的前置）。</summary>
+    public bool AllowBranch { get; set; }
+
     public List<BlockInput> Blocks { get; set; } = [];
 
     public List<IngestLink> Links { get; set; } = [];
@@ -205,6 +208,9 @@ public sealed class KbUpdateRequest
     public string? Reason { get; set; }
 
     public string? NamedVersion { get; set; }
+
+    /// <summary>允许 expectedVersion 指向旧版本，拉出分叉。</summary>
+    public bool AllowBranch { get; set; }
 
     public RationaleSource RationaleSource { get; set; } = RationaleSource.Ai;
 }

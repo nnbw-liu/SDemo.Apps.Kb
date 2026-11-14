@@ -169,6 +169,7 @@ public static class McpToolCatalog
           "properties": {
             "docId": { "type": "string" },
             "expectedVersion": { "type": "integer", "minimum": 1, "description": "乐观并发：先 kb_get 拿当前 seq" },
+            "allowBranch": { "type": "boolean", "description": "expectedVersion 指向旧版本时允许拉分支" },
             "rationale": { "type": "string", "description": "为什么改——这是追溯里最值钱的字段" },
             "reason": { "type": "string" },
             "namedVersion": { "type": "string", "description": "requirement 语义版本，如 v1.1 / v2.0；缺省自动 minor" },
