@@ -1,3 +1,6 @@
+using System.IO;
+using System.Security.AccessControl;
+using System.Security.Principal;
 using System.Text;
 using SDemo.App.Kb.Contracts;
 
@@ -61,6 +64,7 @@ public sealed class KbTokenProvisioner
         var temp = path + ".tmp";
         File.WriteAllText(temp, token, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
         File.Move(temp, path, overwrite: true);
+        RestrictToCurrentUser(path);
 
         return new TokenFileInfo(
             appId,
@@ -111,6 +115,44 @@ public sealed class KbTokenProvisioner
         }
 
         return Path.Combine(_directory, appId + ".token");
+    }
+
+    /// <summary>
+    /// token 文件只给当前用户读写。Windows 上断开继承并显式授当前用户；
+    /// 非 Windows 退化为 chmod 600。失败不阻塞签发（文件仍在 LOCALAPPDATA）。
+    /// </summary>
+    private static void RestrictToCurrentUser(string path)
+    {
+        try
+        {
+            if (OperatingSystem.IsWindows())
+            {
+                var info = new FileInfo(path);
+                var security = info.GetAccessControl();
+                security.SetAccessRuleProtection(isProtected: true, preserveInheritance: false);
+
+                var user = WindowsIdentity.GetCurrent().User;
+                if (user is not null)
+                {
+                    security.AddAccessRule(new FileSystemAccessRule(
+                        user,
+                        FileSystemRights.FullControl,
+                        AccessControlType.Allow));
+                }
+
+                info.SetAccessControl(security);
+            }
+            else
+            {
+                File.SetUnixFileMode(
+                    path,
+                    UnixFileMode.UserRead | UnixFileMode.UserWrite);
+            }
+        }
+        catch (Exception)
+        {
+            // 非 NTFS / 受限环境：保留默认用户配置目录 ACL，不阻塞使用。
+        }
     }
 }
 

@@ -1,0 +1,219 @@
+@inject KbService Kb
+
+<div class="kb-col kb-col-main kb-page settings-page">
+    <div class="page-head">
+        <div>
+            <h2>设置</h2>
+            <p class="muted">保留策略、存储统计与索引维护；改动立即写入本库。</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-ghost btn-sm" @onclick="LoadAsync"><Icons Name="refresh" />刷新</button>
+        </div>
+    </div>
+
+    @if (_message is not null)
+    {
+        <div class="kb-alert kb-ok">@_message</div>
+    }
+
+    @if (_error is not null)
+    {
+        <div class="kb-alert">@_error</div>
+    }
+
+    <section class="settings-section">
+        <div class="rail-label">保留策略</div>
+        <p class="muted">staging 到期自动清理；归档后不受 TTL 影响。requirement 永远全留。</p>
+
+        @if (_settings is not null)
+        {
+            <div class="setting-grid">
+                <label class="setting-field">
+                    <span>暂存保留版本数</span>
+                    <input type="number" min="1" max="100" @bind="_settings.StagingVersions" />
+                </label>
+                <label class="setting-field">
+                    <span>归档笔记保留版本数</span>
+                    <input type="number" min="1" max="1000" @bind="_settings.NoteVersions" />
+                </label>
+                <label class="setting-field">
+                    <span>会议 / 决策 TTL（天）</span>
+                    <input type="number" min="0" max="3650" @bind="_settings.MeetingTtlDays" />
+                </label>
+                <label class="setting-field">
+                    <span>Agent 产物 TTL（天）</span>
+                    <input type="number" min="0" max="3650" @bind="_settings.AgentTtlDays" />
+                </label>
+                <label class="setting-field">
+                    <span>回收站（天）</span>
+                    <input type="number" min="1" max="365" @bind="_settings.TrashDays" />
+                </label>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn btn-primary btn-sm" disabled="@_busy" @onclick="SaveSettings">
+                    @(_busy ? "保存中…" : "保存保留策略")
+                </button>
+            </div>
+        }
+    </section>
+
+    <section class="settings-section">
+        <div class="rail-label">存储</div>
+        @if (_stats is null)
+        {
+            <p class="muted">正在读取…</p>
+        }
+        else
+        {
+            <div class="stat-grid">
+                <div class="stat">
+                    <span>库文件</span>
+                    <strong>@KbUi.FormatBytes(_stats.DatabaseBytes)</strong>
+                    <small>kb.db + WAL</small>
+                </div>
+                <div class="stat">
+                    <span>原件</span>
+                    <strong>@KbUi.FormatBytes(_stats.BlobBytes)</strong>
+                    <small>可清理 @KbUi.FormatBytes(_stats.ReclaimableBlobBytes)</small>
+                </div>
+                <div class="stat">
+                    <span>正文</span>
+                    <strong>@_stats.TextChars</strong>
+                    <small>字符</small>
+                </div>
+                <div class="stat">
+                    <span>文档</span>
+                    <strong>@_stats.DocCount</strong>
+                    <small>@_stats.StagingCount 条暂存 · @_stats.TrashCount 条回收站</small>
+                </div>
+                <div class="stat">
+                    <span>块 / 版本</span>
+                    <strong>@_stats.BlockCount / @_stats.VersionCount</strong>
+                    <small>内容寻址块 / 不可变版本</small>
+                </div>
+            </div>
+        }
+    </section>
+
+    <section class="settings-section">
+        <div class="rail-label">索引与 token</div>
+        <div class="setting-row">
+            <div class="setting-copy">
+                <strong>重建 FTS 索引</strong>
+                <small>正文在库里，索引可随时重建；重建期间检索会短暂变慢。</small>
+            </div>
+            <button class="btn @(_rebuildArmed ? "btn-danger" : "btn-ghost") btn-sm"
+                    disabled="@_busy"
+                    @onclick="RebuildIndex">
+                @(_rebuildArmed ? "确认重建" : "重建索引")
+            </button>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-copy">
+                <strong>per-app token 目录</strong>
+                <small>@KbPaths.TokenDirectory</small>
+            </div>
+            <span class="uri-chip">SDemo.Kb.exe --tokens</span>
+        </div>
+
+        <div class="setting-row">
+            <div class="setting-copy">
+                <strong>版本</strong>
+                <small>sdemo.kb @KbConstants.AppVersion · 零模型凭证</small>
+            </div>
+        </div>
+    </section>
+</div>
+
+@code {
+    private RetentionSettings? _settings;
+    private StorageStats? _stats;
+    private bool _busy;
+    private bool _rebuildArmed;
+    private string? _message;
+    private string? _error;
+
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            var settings = await Task.Run(Kb.GetRetentionSettings);
+            var stats = await Task.Run(Kb.GetStorageStats);
+            _settings = settings;
+            _stats = stats;
+        }
+        catch (Exception ex)
+        {
+            _error = $"读取设置失败：{ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private async Task SaveSettings()
+    {
+        if (_settings is null || _busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _message = null;
+        _error = null;
+
+        try
+        {
+            var settings = _settings;
+            await Task.Run(() => Kb.SaveRetentionSettings(settings, "sdemo.kb"));
+            _message = "保留策略已保存。";
+            await LoadAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"保存失败：{ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RebuildIndex()
+    {
+        if (!_rebuildArmed)
+        {
+            _rebuildArmed = true;
+            _message = "再点一次确认重建；正文不会受影响。";
+            return;
+        }
+
+        _rebuildArmed = false;
+        _busy = true;
+        _message = null;
+        _error = null;
+
+        try
+        {
+            await Task.Run(Kb.RebuildIndexes);
+            _message = "索引已重建。";
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"重建失败：{ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+}

@@ -1,0 +1,178 @@
+@using Microsoft.AspNetCore.Components.Forms
+@inject KbService Kb
+
+<div class="kb-col kb-col-main kb-page import-page">
+    <div class="page-head">
+        <div>
+            <h2>导入</h2>
+            <p class="muted">md / txt 导入即建 v1；同名文件再次导入按块 diff 建新版本。docx / pdf 在 P4-d 接入。</p>
+        </div>
+    </div>
+
+    <div class="import-drop">
+        <Icons Name="plus" />
+        <h3>选择 Markdown 或纯文本文件</h3>
+        <p class="muted">点下面的按钮选择文件；单文件上限 5 MB。</p>
+
+        <label class="btn btn-primary btn-sm import-pick">
+            选择文件
+            <InputFile OnChange="OnFileSelected" multiple accept=".md,.markdown,.txt" />
+        </label>
+
+        <div class="import-kind">
+            <span class="muted">类型</span>
+            <select @bind="_kindText">
+                <option value="reference">资料</option>
+                <option value="note">笔记</option>
+                <option value="requirement">需求</option>
+                <option value="decision">决策</option>
+            </select>
+        </div>
+
+        @if (_busy)
+        {
+            <p class="muted">正在导入…</p>
+        }
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="kb-alert">@_error</div>
+    }
+
+    @if (_items.Count > 0)
+    {
+        <table class="kbtable import-table">
+            <thead>
+                <tr>
+                    <th>文件</th>
+                    <th>结果</th>
+                    <th>版本</th>
+                    <th style="text-align:right">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _items)
+                {
+                    <tr>
+                        <td><span class="cell-title">@item.Name</span><span class="cell-sub">@item.Detail</span></td>
+                        <td>
+                            <span class="status-pill @(item.Ok ? "is-ok" : "is-error")">
+                                @(item.Ok ? "已导入" : "失败")
+                            </span>
+                        </td>
+                        <td>@(item.Seq > 0 ? "v" + item.Seq : "—")</td>
+                        <td style="text-align:right">
+                            @if (item.DocId is not null)
+                            {
+                                <button class="btn btn-ghost btn-sm" @onclick="() => OnOpenDoc.InvokeAsync(item.DocId)">打开</button>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <p class="muted import-hint">导入队列会显示在这里：解析中 / 已完成 / 已跳过 + 原因。</p>
+    }
+</div>
+
+@code {
+    private const long MaxBytes = 5 * 1024 * 1024;
+    private readonly List<ImportItem> _items = [];
+    private string _kindText = "reference";
+    private bool _busy;
+    private string? _error;
+
+    [Parameter] public EventCallback<string> OnOpenDoc { get; set; }
+
+    [Parameter] public EventCallback OnImported { get; set; }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs args)
+    {
+        _error = null;
+        _busy = true;
+
+        try
+        {
+            foreach (var file in args.GetMultipleFiles(20))
+            {
+                _items.Insert(0, new ImportItem { Name = file.Name });
+                StateHasChanged();
+
+                if (file.Size > MaxBytes)
+                {
+                    _items[0].Detail = "超过 5 MB，已跳过";
+                    continue;
+                }
+
+                var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+                if (extension is not (".md" or ".markdown" or ".txt"))
+                {
+                    _items[0].Detail = "P4-d 才支持该格式";
+                    continue;
+                }
+
+                try
+                {
+                    await using var stream = file.OpenReadStream(MaxBytes);
+                    using var reader = new StreamReader(stream);
+                    var content = await reader.ReadToEndAsync();
+                    var kind = ParseKind(_kindText);
+                    var result = await Task.Run(() => Kb.ImportText(
+                        file.Name,
+                        content,
+                        kind: kind,
+                        rationale: "查看器导入"));
+
+                    _items[0].Ok = true;
+                    _items[0].DocId = result.DocId;
+                    _items[0].Seq = result.Seq;
+                    _items[0].Detail = result.Created
+                        ? $"新建 v{result.Seq} · {result.BlockCount} 块"
+                        : result.NoChange
+                            ? "内容未变，跳过"
+                            : $"更新到 v{result.Seq} · {result.BlockCount} 块";
+                }
+                catch (Exception ex)
+                {
+                    _items[0].Detail = ex.Message;
+                }
+            }
+
+            await OnImported.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"读取文件失败：{ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+
+    private static KbKind ParseKind(string value) => value switch
+    {
+        "note" => KbKind.Note,
+        "requirement" => KbKind.Requirement,
+        "decision" => KbKind.Decision,
+        _ => KbKind.Reference,
+    };
+
+    private sealed class ImportItem
+    {
+        public string Name { get; init; } = string.Empty;
+
+        public string Detail { get; set; } = "解析中…";
+
+        public bool Ok { get; set; }
+
+        public string? DocId { get; set; }
+
+        public int Seq { get; set; }
+    }
+}

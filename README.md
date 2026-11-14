@@ -3,7 +3,7 @@
 **sdemo.kb**：个人文档的版本、差异、检索与引用追溯。只存只找，**不持有模型凭证**。
 
 > 本仓是 [SDemo 主仓](https://github.com/nnbw-liu/SDemo) 的子模块（`Kb/`，主仓根级）。
-> 状态：**P4-a 地基 + P4-b 保留 + P4-e 查看器第一刀 + token 分发/Planner 引用登记**（2026-11-14）——七工程、`SDemo.Kb.slnf`、62 个测试。
+> 状态：**P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + token 分发/Planner 引用登记**（2026-11-14）——七工程、`SDemo.Kb.slnf`、65 个测试。
 >
 > **定位**：KB 不是一个应用，而是一块数据面 + 一个查看器。它与 DesktopAgent、DesktopAssembly 同级，**不挂在 `Apps/` 下**——写面是给所有应用用的协议，读面才是产品。
 
@@ -11,8 +11,10 @@
 
 | 能力 | 入口 |
 | --- | --- |
-| 打开本地库阅读文档 | `SDemo.Kb.Viewer.exe`（01 库 / 02 文档） |
-| 导入 md / txt，建不可变 `v1` | `kb_import` / `POST /v1/ingest` |
+| 打开本地库阅读文档 | `SDemo.Kb.Viewer.exe`（01 库 / 02 文档 / 03 对比 / 04 待归档 / 05 导入 / 06 检索 / 07 设置） |
+| 块级 + 词级版本对比 | 查看器「对比上一版」 / `kb_diff` |
+| 设置保留策略 / 存储统计 / 重建索引 | 查看器「设置」 |
+| 导入 md / txt | 查看器「导入」 / `kb_import` |
 | 块级修订（add / replace / remove） | 查看器「编辑块」 / `kb_update` / `POST /v1/revise` |
 | 中文两字检索 + 当前 / 历史 / 变更三面路由 | 查看器「检索」 / `kb_search` |
 | 块级 + 词级 diff | `kb_diff` |
@@ -25,7 +27,7 @@
 | 待归档 + 批量归档 + 存储统计 | 查看器「待归档」 / `/v1/inbox` `/v1/stats` |
 | KB 离线时写入不丢 | `KbOutbox` + `KbIngestClient` |
 
-未做：03 版本对比 / 05 导入 / 07 设置屏、docx / pptx / xlsx / pdf 解析（P4-d）、命名修订与多父合并（P4-c）、向量检索（P4+）。
+未做：docx / pptx / xlsx / pdf 解析（P4-d）、命名修订与多父合并（P4-c）、Meeting 引用登记（尚无 `src/`）、向量检索（P4+）。
 
 ## 快速开始
 
@@ -47,7 +49,7 @@ SDemo.Kb.exe --tokens
 
 token 文件在 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\<appId>.token`：
 `sdemo.kb` / `sdemo.agent` / `sdemo.planner` / `sdemo.meeting` 首次启动自动签发。
-`sdemo.kb.json` 运行期文件里的 `tokenDirectory` 指向同一目录。
+文件 ACL 只授当前用户；`sdemo.kb.json` 运行期文件里的 `tokenDirectory` 指向同一目录。
 
 写一笔：
 

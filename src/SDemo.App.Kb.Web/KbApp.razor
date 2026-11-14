@@ -22,6 +22,9 @@
             <button class="nav-item @Active("search")" @onclick='() => SetSection("search")'>
                 <Icons Name="search" />检索
             </button>
+            <button class="nav-item @Active("import")" @onclick='() => SetSection("import")'>
+                <Icons Name="plus" />导入
+            </button>
         </div>
 
         <div class="nav-group-label">其它</div>
@@ -29,7 +32,7 @@
             <button class="nav-item" disabled title="回收站界面在 P4-e 后续">
                 <Icons Name="trash" />回收站
             </button>
-            <button class="nav-item" disabled title="设置界面在 P4-e 后续">
+            <button class="nav-item @Active("settings")" @onclick='() => SetSection("settings")'>
                 <Icons Name="settings" />设置
             </button>
         </div>
@@ -87,8 +90,24 @@
                 case "search":
                     <SearchView Query="@_searchQuery" OnOpen="@(target => OpenSearchHit(target))" />
                     break;
+                case "import":
+                    <ImportView OnOpenDoc="@(docId => OpenDoc(docId))" OnImported="@RefreshCounts" />
+                    break;
+                case "settings":
+                    <SettingsView OnChanged="@RefreshCounts" />
+                    break;
+                case "diff" when _diffDocId is not null:
+                    <DiffView DocId="@_diffDocId"
+                              From="@(_diffFrom ?? 1)"
+                              To="@(_diffTo ?? 1)"
+                              OnBack="@BackToDocument"
+                              OnOpenDoc="@(docId => OpenDoc(docId))" />
+                    break;
                 default:
-                    <LibraryView SelectedDocId="@_selectedDocId" FocusBlockId="@_focusBlockId" OnSelectDoc="@(docId => OpenDoc(docId))" />
+                    <LibraryView SelectedDocId="@_selectedDocId"
+                                 FocusBlockId="@_focusBlockId"
+                                 OnSelectDoc="@(docId => OpenDoc(docId))"
+                                 OnCompare="OpenDiff" />
                     break;
             }
         </main>
@@ -99,6 +118,9 @@
     private string _section = "library";
     private string? _selectedDocId;
     private string? _focusBlockId;
+    private string? _diffDocId;
+    private int? _diffFrom;
+    private int? _diffTo;
     private string _globalQuery = string.Empty;
     private string _searchQuery = string.Empty;
     private bool _light;
@@ -110,6 +132,9 @@
     {
         "inbox" => "待归档",
         "search" => "检索",
+        "import" => "导入",
+        "settings" => "设置",
+        "diff" => "版本对比",
         _ => "全部文档",
     };
 
@@ -117,6 +142,9 @@
     {
         "inbox" => "暂存内容到期自动清理；归档后全量保留。",
         "search" => "四个索引面：当前态 / 历史态 / 变更事实 / 含暂存。",
+        "import" => "md / txt 导入即建 v1；同名文件再次导入按块 diff 建新版本。",
+        "settings" => "保留策略、存储统计与索引维护。",
+        "diff" => "块级结构 + 词级高亮；变更理由在下方。",
         _ when _stats is null => "正在读取本地库…",
         _ => $"{_stats.DocCount} 篇 · {_stats.StagingCount} 条暂存 · 原件 {KbUi.FormatBytes(_stats.BlobBytes)} · {_stats.BlockCount} 块",
     };
@@ -140,6 +168,21 @@
     {
         _selectedDocId = docId;
         _focusBlockId = null;
+        _section = "library";
+        return Task.CompletedTask;
+    }
+
+    private Task OpenDiff((string DocId, int From, int To) target)
+    {
+        _diffDocId = target.DocId;
+        _diffFrom = target.From;
+        _diffTo = target.To;
+        _section = "diff";
+        return Task.CompletedTask;
+    }
+
+    private Task BackToDocument()
+    {
         _section = "library";
         return Task.CompletedTask;
     }

@@ -28,6 +28,15 @@ public static class KbUi
         _ => "系统",
     };
 
+    public static string RationaleLabel(RationaleSource? source) => source switch
+    {
+        RationaleSource.User => "你",
+        RationaleSource.Ai => "Agent",
+        RationaleSource.Import => "导入",
+        RationaleSource.Meeting => "会议",
+        _ => "系统",
+    };
+
     public static string RelativeTime(DateTimeOffset value)
     {
         var delta = DateTimeOffset.UtcNow - value;

@@ -461,3 +461,203 @@ td.is-selected {
     color: var(--muted);
     font-size: 11px;
 }
+
+/* ── 版本对比 ─────────────────────────────────────────────────────── */
+
+.diff-picker {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+    font-size: 12.5px;
+}
+
+.diff-picker select,
+.import-kind select,
+.setting-field input {
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    color: var(--text);
+    font: inherit;
+    padding: 6px 9px;
+}
+
+.diff-summary {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.diff-pill {
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--surface-sunken);
+    border: 1px solid var(--line);
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+.diff-pill-add { color: #4ade80; border-color: rgba(74, 222, 128, 0.3); }
+.diff-pill-replace { color: #fbbf24; border-color: rgba(251, 191, 36, 0.3); }
+.diff-pill-remove { color: #f87171; border-color: rgba(248, 113, 113, 0.3); }
+
+.diff-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+}
+
+.diff-pane {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-sunken);
+    overflow: hidden;
+}
+
+.diff-pane-head {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--line);
+    color: var(--muted);
+    font-size: 11.5px;
+}
+
+.diff-line {
+    padding: 9px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-size: 12.5px;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.diff-line:last-child { border-bottom: 0; }
+.diff-add { background: rgba(74, 222, 128, 0.06); }
+.diff-del { background: rgba(248, 113, 113, 0.06); }
+.diff-replace { background: transparent; }
+
+.diff-add-text {
+    background: rgba(74, 222, 128, 0.22);
+    color: #bbf7d0;
+    border-radius: 3px;
+}
+
+.diff-del-text {
+    background: rgba(248, 113, 113, 0.22);
+    color: #fecaca;
+    border-radius: 3px;
+    text-decoration: line-through;
+}
+
+.diff-placeholder {
+    padding: 12px;
+    color: var(--faint, var(--muted));
+    font-size: 11.5px;
+}
+
+.diff-reason {
+    margin-top: 18px;
+    border-top: 1px solid var(--line);
+    padding-top: 14px;
+}
+
+/* ── 设置 ─────────────────────────────────────────────────────────── */
+
+.settings-section {
+    border-top: 1px solid var(--line);
+    padding: 18px 0 22px;
+}
+
+.settings-section:first-of-type {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.setting-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    max-width: 720px;
+}
+
+.setting-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.settings-actions {
+    margin-top: 14px;
+}
+
+.setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 18px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.setting-row:last-child { border-bottom: 0; }
+.setting-copy { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.setting-copy strong { font-size: 13px; }
+.setting-copy small { color: var(--muted); font-size: 11.5px; word-break: break-all; }
+
+.stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.kb-ok {
+    border-color: rgba(74, 222, 128, 0.35);
+    background: rgba(74, 222, 128, 0.08);
+    color: #86efac;
+}
+
+/* ── 导入 ─────────────────────────────────────────────────────────── */
+
+.import-drop {
+    border: 1px dashed var(--line-strong, rgba(255, 255, 255, 0.22));
+    border-radius: 14px;
+    padding: 34px 20px;
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.import-drop h3 { margin: 10px 0 4px; font-size: 16px; }
+.import-drop .muted { margin: 0 0 16px; }
+
+.import-pick { display: inline-flex; align-items: center; gap: 6px; }
+.import-pick input[type="file"] { display: none; }
+
+.import-kind {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 12px;
+}
+
+.import-hint { margin-top: 10px; }
+
+.status-pill.is-ok { color: #86efac; }
+.status-pill.is-error { color: #fca5a5; }
+
+@media (max-width: 1080px) {
+    .setting-grid,
+    .stat-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .diff-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

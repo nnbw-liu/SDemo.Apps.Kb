@@ -1,0 +1,241 @@
+@inject KbService Kb
+
+<div class="kb-col kb-col-main kb-page diff-page">
+    <div class="page-head">
+        <div>
+            <h2>@(_title is null ? "版本对比" : _title)</h2>
+            <p class="muted">
+                v@(_result?.FromSeq) → v@(_result?.ToSeq)
+                · 块级结构 + 词级高亮
+            </p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-ghost btn-sm" @onclick="OnBack">返回文档</button>
+            <button class="btn btn-ghost btn-sm" @onclick="() => OnOpenDoc.InvokeAsync(DocId)">打开当前版本</button>
+        </div>
+    </div>
+
+    @if (_error is not null)
+    {
+        <div class="kb-alert">@_error</div>
+    }
+
+    <div class="diff-picker">
+        <label>从 <select @bind="_fromSeq">
+            @foreach (var version in _versions)
+            {
+                <option value="@version.Seq">v@(version.Seq) · @KbUi.AuthorLabel(version.Author)</option>
+            }
+        </select></label>
+        <span class="muted">→</span>
+        <label>到 <select @bind="_toSeq">
+            @foreach (var version in _versions)
+            {
+                <option value="@version.Seq">v@(version.Seq) · @KbUi.AuthorLabel(version.Author)</option>
+            }
+        </select></label>
+        <button class="btn btn-primary btn-sm" disabled="@(_loading || _versions.Count < 2)" @onclick="LoadAsync">
+            重新对比
+        </button>
+    </div>
+
+    @if (_loading)
+    {
+        <div class="kb-empty"><p>正在计算差异…</p></div>
+    }
+    else if (_result is null)
+    {
+        <div class="kb-empty kb-empty-large">
+            <h2>还没有可对比的版本</h2>
+            <p class="muted">至少要有两个版本才能对比。</p>
+        </div>
+    }
+    else
+    {
+        <div class="diff-summary">
+            <span class="diff-pill diff-pill-add">+@_result.Stats.Added 块新增</span>
+            <span class="diff-pill diff-pill-replace">~@_result.Stats.Replaced 块替换</span>
+            <span class="diff-pill diff-pill-remove">-@_result.Stats.Removed 块删除</span>
+            <span class="diff-pill">@_result.Stats.Unchanged 块复用</span>
+        </div>
+
+        <div class="diff-grid">
+            <div class="diff-pane">
+                <div class="diff-pane-head">v@(_result.FromSeq) · 旧</div>
+                @foreach (var block in _result.Blocks)
+                {
+                    if (block.Op == ChangeOp.Add)
+                    {
+                        <div class="diff-placeholder">（新增块）</div>
+                    }
+                    else
+                    {
+                        <div class="diff-line @(block.Op == ChangeOp.Remove ? "diff-del" : "diff-replace")">
+                            @if (block.Op == ChangeOp.Replace)
+                            {
+                                foreach (var segment in Segments(block, "left"))
+                                {
+                                    <span class="@SegmentClass(segment.Op)">@segment.Text</span>
+                                }
+                            }
+                            else
+                            {
+                                <span>@block.BeforeText</span>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+
+            <div class="diff-pane">
+                <div class="diff-pane-head">v@(_result.ToSeq) · 新</div>
+                @foreach (var block in _result.Blocks)
+                {
+                    if (block.Op == ChangeOp.Remove)
+                    {
+                        <div class="diff-placeholder">（已删除块）</div>
+                    }
+                    else
+                    {
+                        <div class="diff-line @(block.Op == ChangeOp.Add ? "diff-add" : "diff-replace")">
+                            @if (block.Op == ChangeOp.Replace)
+                            {
+                                foreach (var segment in Segments(block, "right"))
+                                {
+                                    <span class="@SegmentClass(segment.Op)">@segment.Text</span>
+                                }
+                            }
+                            else
+                            {
+                                <span>@block.AfterText</span>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+
+        <div class="diff-reason">
+            <div class="rail-label">为什么改</div>
+            @if (_changes is null || _changes.Changes.Count == 0)
+            {
+                <p class="muted">这个版本没有填变更理由。</p>
+            }
+            else
+            {
+                foreach (var change in _changes.Changes.Where(item => item.VersionSeq == _result.ToSeq))
+                {
+                    <div class="reason-item">
+                        <div class="reason-who">
+                            v@(change.VersionSeq) · @KbUi.RationaleLabel(change.RationaleSource)
+                            <small>@KbUi.RelativeTime(change.CreatedAt)</small>
+                        </div>
+                        <div class="reason-text">@(string.IsNullOrWhiteSpace(change.Rationale) ? "（未填理由）" : change.Rationale)</div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private IReadOnlyList<VersionSummary> _versions = [];
+    private DiffResult? _result;
+    private ChangesResult? _changes;
+    private string? _title;
+    private string? _error;
+    private bool _loading;
+    private int _fromSeq;
+    private int _toSeq;
+    private string? _loadedKey;
+
+    [Parameter] public string DocId { get; set; } = string.Empty;
+
+    [Parameter] public int From { get; set; }
+
+    [Parameter] public int To { get; set; }
+
+    [Parameter] public EventCallback OnBack { get; set; }
+
+    [Parameter] public EventCallback<string> OnOpenDoc { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var key = $"{DocId}:{From}:{To}";
+        if (string.Equals(_loadedKey, key, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        _loadedKey = key;
+        _fromSeq = From;
+        _toSeq = To;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var docId = DocId;
+            var versions = await Task.Run(() => Kb.History(docId, 100));
+            _versions = versions;
+
+            if (versions.Count < 2)
+            {
+                _result = null;
+                return;
+            }
+
+            var from = _fromSeq <= 0 ? versions[^2].Seq : _fromSeq;
+            var to = _toSeq <= 0 ? versions[0].Seq : _toSeq;
+            if (to == from)
+            {
+                to = versions[0].Seq;
+                from = versions.Skip(1).FirstOrDefault()?.Seq ?? from;
+            }
+
+            _fromSeq = from;
+            _toSeq = to;
+
+            _result = await Task.Run(() => Kb.Diff(new KbDiffRequest
+            {
+                DocId = docId,
+                From = from,
+                To = to,
+            }));
+
+            _changes = await Task.Run(() => Kb.Changes(new KbChangesRequest { DocId = docId, Limit = 100 }));
+            var content = await Task.Run(() => Kb.Get(new KbGetRequest { DocId = docId, Version = "v" + to }));
+            _title = content?.Doc.Title;
+        }
+        catch (Exception ex)
+        {
+            _error = $"对比失败：{ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static IEnumerable<WordDiffSegment> Segments(BlockDiff block, string side) =>
+        block.WordDiffs.Where(segment => side == "left"
+            ? segment.Op is "equal" or "delete"
+            : segment.Op is "equal" or "insert");
+
+    private static string SegmentClass(string op) => op switch
+    {
+        "delete" => "diff-del-text",
+        "insert" => "diff-add-text",
+        _ => string.Empty,
+    };
+}
+
+
+
+

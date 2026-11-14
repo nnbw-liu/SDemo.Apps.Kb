@@ -221,14 +221,57 @@ public sealed partial class KbService
             throw KbException.Invalid($"文件不存在：{path}");
         }
 
-        var extension = Path.GetExtension(path).ToLowerInvariant();
+        var key = Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToLowerInvariant())));
+
+        return ImportCore(key, Path.GetFileName(path), File.ReadAllText(path), title, kind, rationale);
+    }
+
+    /// <summary>
+    /// 从界面（BlazorWebView 文件选择）导入：没有本机路径，只按文件名做幂等键；
+    /// 同名文件重新导入会按块 diff 生成新版本。
+    /// </summary>
+    public WriteResult ImportText(
+        string fileName,
+        string content,
+        string? title = null,
+        KbKind kind = KbKind.Reference,
+        string? rationale = null)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            throw KbException.Invalid("文件名不能为空。");
+        }
+
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            throw KbException.Invalid("文件没有可导入的文本。");
+        }
+
+        var name = Path.GetFileName(fileName);
+        var key = Convert.ToHexStringLower(
+            System.Security.Cryptography.SHA256.HashData(
+                System.Text.Encoding.UTF8.GetBytes(("name:" + name.ToLowerInvariant()).ToLowerInvariant())));
+
+        return ImportCore(key, name, content, title, kind, rationale);
+    }
+
+    private WriteResult ImportCore(
+        string key,
+        string fileName,
+        string content,
+        string? title,
+        KbKind kind,
+        string? rationale)
+    {
+        var extension = Path.GetExtension(fileName).ToLowerInvariant();
         if (extension is ".docx" or ".pdf" or ".pptx" or ".xlsx")
         {
             throw KbException.Invalid($"P4-a 先支持 md / txt；{extension} 在 P4-d 接入。");
         }
 
-        var content = File.ReadAllText(path);
-        var specs = KbBlockSplitter.SplitByExtension(path, content);
+        var specs = KbBlockSplitter.SplitByExtension(fileName, content);
         if (specs.Count == 0)
         {
             throw KbException.Invalid("文件没有可导入的文本块。");
@@ -245,21 +288,17 @@ public sealed partial class KbService
             })
             .ToList();
 
-        var pathKey = Convert.ToHexStringLower(
-            System.Security.Cryptography.SHA256.HashData(
-                System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToLowerInvariant())));
-
         var ingest = new IngestRequest
         {
             Source = new IngestSource
             {
                 AppId = KbConstants.AppId,
-                EntityUri = $"sdemo.kb/import/{pathKey}",
+                EntityUri = $"sdemo.kb/import/{key}",
             },
             Kind = kind,
-            Title = title ?? Path.GetFileNameWithoutExtension(path),
+            Title = title ?? Path.GetFileNameWithoutExtension(fileName),
             Retention = RetentionLevel.Durable,
-            Rationale = rationale ?? $"导入 {Path.GetFileName(path)}",
+            Rationale = rationale ?? $"导入 {fileName}",
             RationaleSource = RationaleSource.Import,
             Blocks = blocks,
         };

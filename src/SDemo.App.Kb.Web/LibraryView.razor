@@ -76,7 +76,7 @@
         }
         else
         {
-            <DocumentReader DocId="@SelectedDocId" FocusBlockId="@FocusBlockId" OnOpenDoc="@OnSelectDoc" />
+            <DocumentReader DocId="@SelectedDocId" FocusBlockId="@FocusBlockId" OnOpenDoc="@OnSelectDoc" OnCompare="@OnCompare" />
         }
     </div>
 </div>
@@ -94,6 +94,8 @@
     [Parameter] public string? FocusBlockId { get; set; }
 
     [Parameter] public EventCallback<string> OnSelectDoc { get; set; }
+
+    [Parameter] public EventCallback<(string DocId, int From, int To)> OnCompare { get; set; }
 
     protected override async Task OnInitializedAsync()
     {

@@ -62,6 +62,12 @@ else
                 <button class="btn btn-ghost btn-sm rail-toggle" @onclick="ToggleRail">
                     @(_railOpen ? "收起详情" : "版本与引用")
                 </button>
+
+                <button class="btn btn-ghost btn-sm"
+                        disabled="@(_content.Version.Seq <= 1)"
+                        @onclick="ComparePrevious">
+                    <Icons Name="refresh" />对比上一版
+                </button>
             </div>
 
             @if (_saveError is not null)
@@ -177,7 +183,7 @@ else
                     {
                         <div class="reason-item">
                             <div class="reason-who">
-                                v@(change.VersionSeq) · @(change.RationaleSource?.ToString() ?? "system")
+                                v@(change.VersionSeq) · @KbUi.RationaleLabel(change.RationaleSource)
                                 <small>@KbUi.RelativeTime(change.CreatedAt)</small>
                             </div>
                             <div class="reason-text">@(string.IsNullOrWhiteSpace(change.Rationale) ? "（未填理由）" : change.Rationale)</div>
@@ -212,6 +218,8 @@ else
     [Parameter] public string? FocusBlockId { get; set; }
 
     [Parameter] public EventCallback<string> OnOpenDoc { get; set; }
+
+    [Parameter] public EventCallback<(string DocId, int From, int To)> OnCompare { get; set; }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -361,6 +369,16 @@ else
 
     private void ToggleRail() => _railOpen = !_railOpen;
 
+    private async Task ComparePrevious()
+    {
+        if (_content is null || _content.Version.Seq <= 1)
+        {
+            return;
+        }
+
+        await OnCompare.InvokeAsync((_content.Doc.DocId, _content.Version.Seq - 1, _content.Version.Seq));
+    }
+
     private async Task OpenRef(RefView link)
     {
         if (KbUri.TryParse(link.ToUri, out var uri, out _) && uri is not null)
@@ -369,5 +387,6 @@ else
         }
     }
 }
+
 
 
