@@ -5,7 +5,7 @@ using SDemo.App.Kb.Contracts;
 namespace SDemo.App.Kb.Host;
 
 /// <summary>运行期连接信息：只写回环地址与端口，不写任何旧 token。</summary>
-internal static class KbRuntimeFile
+public static class KbRuntimeFile
 {
     public static void Write(int port, string dataDirectory)
     {
@@ -47,3 +47,4 @@ internal static class KbRuntimeFile
         }
     }
 }
+

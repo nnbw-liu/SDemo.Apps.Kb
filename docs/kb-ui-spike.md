@@ -1,6 +1,6 @@
 # KB 查看器 UI 技术 spike（WPF + BlazorWebView）
 
-> 状态：spike 结论（2026-11-14）· 服务于 P4-e
+> 状态：**已落地（P4-e 第一刀，2026-11-14）** · 服务于 P4-e
 > 关联：[kb-ui.md](kb-ui.md)（7 屏设计）· [kb-design.md](kb-design.md) §1.1（常驻服务 + 查看器）
 
 ## 1. 问题
@@ -33,32 +33,32 @@ KB 的查看器要用和 Planner 一致的桌面技术栈：
   安装包不需要自带浏览器内核。
 - **引用链**：WPF Viewer 可以同时引用 `net10.0` 的 Core 与 Razor Components，无需改 Core TFM。
 
-## 4. 结论与推荐
+## 4. 结论与落地
 
-**可行，但界面必须单独成工程。** 原因是测试工程是 `net10.0`，
-不能引用 `net10.0-windows` 的 WPF 工程；把 Host 直接改成 WPF 会让
-`tests/SDemo.Kb.Tests` 失去对 `KbServer` 的引用。
-
-推荐结构（P4-e 落地时）：
+**可行，且已按选项 A 落地。** 界面单独成工程，测试工程不受 WPF TFM 影响：
 
 ```
-src/SDemo.App.Kb.Web       net10.0            Razor 组件 + wwwroot（7 屏）
-src/SDemo.App.Kb.Viewer    net10.0-windows    WPF + BlazorWebView，组合根
+src/SDemo.App.Kb.Web       net10.0            Razor 组件 + wwwroot（四屏）
+src/SDemo.App.Kb.Viewer    net10.0-windows    WPF + BlazorWebView，组合根；内嵌 KbServer
 src/SDemo.App.Kb.Host      net10.0            保持无界面数据面 + CLI（测试用）
 ```
 
-Viewer 与 Host 的关系有两个选项，**需要在 P4-e 开工前拍板**：
+- Viewer 同时承担 UI 与数据面：进程内直接调 Core，不把特权 token 写进 UI 配置。
+- 单实例互斥 `Local\SDemo.Kb.Viewer`；启动即起 KbServer、写 runtime 文件、跑一次维护，之后每小时一次。
+- Viewer 用 `Microsoft.NET.Sdk.Razor`（**不是** `Microsoft.NET.Sdk`）；否则 `_framework/blazor.webview.js` 不随静态资产提供，界面会停在「正在启动」。
+- 窗口 1180×740；≤1280 时右侧版本/引用栏折叠为抽屉，≤1080 时列表收窄。
 
-| 选项 | 做法 | 代价 |
-| --- | --- | --- |
-| A. Viewer 内嵌 KbServer（推荐） | Viewer 是唯一 UI 进程，进程内起回环服务并直接调 Core；Host 只做无界面/服务模式 | 两进程同时打开同一库需单实例互斥；runtime 文件只能一个 owner |
-| B. Viewer 做 Host 的客户端 | Viewer 通过回环 HTTP 读正文，需要 `sdemo.kb` 级 token | token 分发与本地权限更复杂；多一次序列化 |
+## 5. 已验证 / 仍未做
 
-选项 A 与设计 §1.1「界面与服务一起发布」一致，也避免把特权 token 落到 UI 进程配置里。
+已验证（构建 + 真实进程截图）：
 
-## 5. 没验证的部分
+- 四屏可打开：01 全部文档、02 文档详情、04 待归档、06 检索。
+- 阅读正文、版本链、引用与变更理由、收件箱批量归档、检索结果与 `hitTerms`。
+- 块编辑进入编辑态；保存走 `kb_update`（`expectedVersion` 冲突提示）。
+- 窗口进程同时提供 `/v1/health`，runtime 文件能写回。
 
-- 没有真正启动窗口做渲染验收（spike 只到构建层）；P4-e 的第一件事应是跑通
-  「01 库 + 02 文档」两屏并用真实库数据验收。
-- 没测 1440×900 截图、深浅色、键盘与 `sdemo-ui.css` 的像素一致性。
-- 没测 WebView2 在无运行时机器上的回退（需要 bootstrapper 或安装器检查）。
+仍未做：
+
+- 03 版本对比屏、05 导入屏、07 设置屏；搜索的 Ctrl+K 已接，其余键盘快捷键未做。
+- 深/浅色主题的逐屏像素校验、1440×900 截图回归。
+- 无 WebView2 运行时机器上的引导安装（需要 bootstrapper 或安装器检查）。

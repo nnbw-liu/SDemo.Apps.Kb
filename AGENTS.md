@@ -20,7 +20,7 @@
 
 ## 现状（2026-11-14）
 
-✅ **P4-a 地基 + P4-b 保留已落地并跑通验收**：五件套 + `SDemo.Kb.slnf` + 49 个测试。
+✅ **P4-a 地基 + P4-b 保留 + P4-e 第一刀（查看器四屏）已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 52 个测试。
 
 | 已做 | 说明 |
 | --- | --- |
@@ -36,8 +36,9 @@
 | 导入 | md / txt；导入即建 `v1`，再次导入同一路径按块 diff 建新版本 |
 | **保留与 GC** | staging TTL（会议 30 / Agent 90，可被 `ttlDays` 覆盖）→ 软删 → 回收站 7 天 → 块/原件 GC；被引用文档整篇保护 |
 | **收件箱与统计** | `/v1/inbox`（到期倒计时、正文/原件体积）、`/v1/promote-batch`、`/v1/stats`、`/v1/settings/retention`；Host 每小时维护，`--maintain` 手动跑 |
+| **查看器** | WPF + BlazorWebView（选项 A：内嵌 KbServer）；01 全部文档 / 02 文档详情（含版本链、引用、变更理由、块编辑）/ 04 待归档 / 06 检索；深浅色、Ctrl K |
 
-**未做（按分期）**：docx / pptx / xlsx / pdf 解析与 anchor（P4-d）；KB 查看器界面（P4-e，spike 见 [docs/kb-ui-spike.md](docs/kb-ui-spike.md)）；向量检索（P4+）。命名修订与多父合并（P4-c）尚未做。
+**未做（按分期）**：03 版本对比、05 导入、07 设置屏（P4-e 后半）；docx / pptx / xlsx / pdf 解析与 anchor（P4-d）；命名修订与多父合并（P4-c）；向量检索（P4+）。
 
 ## 工程结构
 
@@ -48,7 +49,9 @@
 | `src/SDemo.App.Kb.Core` | 版本链、切块、hash、diff、检索路由、refs/resolve、保留、outbox 客户端 | Contracts + Storage |
 | `src/SDemo.App.Kb.Mcp` | `kb_*` 工具目录 + JSON-RPC 处理 | Contracts + Core |
 | `src/SDemo.App.Kb.Host` | 回环 HTTP（写面 / resolve / MCP）、runtime 文件、CLI | 全部 |
-| `tests/SDemo.Kb.Tests` | 版本链 / 检索 / diff / 引用 / MCP / 回环 HTTP / outbox | 全部 |
+| `src/SDemo.App.Kb.Web` | 查看器 Razor 组件（四屏）、`sdemo-ui.css` 组合 | Contracts + Core |
+| `src/SDemo.App.Kb.Viewer` | WPF + BlazorWebView 组合根；内嵌 KbServer、单实例互斥、维护定时器 | Host + Web + Core |
+| `tests/SDemo.Kb.Tests` | 版本链 / 检索 / diff / 引用 / MCP / 回环 HTTP / outbox / 保留 | 全部（**不含 Viewer**） |
 
 依赖方向单向：`Contracts ← Storage ← Core ← Mcp / Host`。`Mcp` 不直接碰 SQL；`Host` 不写业务规则。
 
@@ -67,6 +70,15 @@ SDemo.Kb.exe --maintain                      # 跑一次 TTL / 回收站 / GC
 ```
 
 运行期连接信息写到 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb.json`（不含 token）。
+
+### 查看器
+
+```powershell
+# 选项 A：查看器内嵌 KbServer；单实例，同一库同时只允许一个 Viewer
+src\SDemo.App.Kb.Viewer\bin\Release\net10.0-windows10.0.19041.0\SDemo.Kb.Viewer.exe
+SDemo.Kb.Viewer.exe --data-dir <目录>
+$env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
+```
 
 ## 契约（代码即契约）
 
@@ -133,6 +145,9 @@ SDemo.Kb.exe --maintain                      # 跑一次 TTL / 回收站 / GC
 - 回收站物理清理前必须先看 `kb_link`：有入库引用的文档整篇保留，否则历史引用会变成死链。
 - 块 GC 的条件是「无版本边 + 无引用」；只删版本边不删块，历史才读得到。
 - Schema 变更必须走 `KbSchema.Migrate` + `PRAGMA user_version`，不能只改 `CREATE TABLE IF NOT EXISTS`。
+- Viewer 必须是 `Microsoft.NET.Sdk.Razor` + `UseWPF`，否则 `_framework/blazor.webview.js` 不会随静态资产提供，界面停在「正在启动」。
+- 测试工程是 `net10.0`，不能引用 `net10.0-windows` 的 Viewer；UI 只能靠 Viewer 构建 + 人工/截图验收。
+- 查看器与 Host 同时打开同一库会各自起 KbServer；当前只用 Viewer 进程内互斥，跨进程单实例留到 P4-f。
 - 写面的 `source.appId` 由 token 决定，客户端自报的值只用于比对，不能作为 owner。
 - 测试里用完 SQLite 要 `SqliteConnection.ClearAllPools()`，否则临时目录删不掉。
 

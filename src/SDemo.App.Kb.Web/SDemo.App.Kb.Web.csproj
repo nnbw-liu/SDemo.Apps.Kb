@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <!-- 查看器界面：Razor 组件 + 设计系统。不直接访问 SQLite，只通过 Core。 -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SDemo.App.Kb.Web</RootNamespace>
+    <AssemblyName>SDemo.App.Kb.Web</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <ProjectReference Include="..\SDemo.App.Kb.Contracts\SDemo.App.Kb.Contracts.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Core\SDemo.App.Kb.Core.csproj" />
+  </ItemGroup>
+
+</Project>

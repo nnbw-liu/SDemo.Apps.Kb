@@ -399,6 +399,59 @@ public sealed partial class KbService
         return session.ListDocs(includeDeleted).Select(doc => MapDoc(session, doc)).ToList();
     }
 
+    public DocListResult ListDocuments(DocListRequest request)
+    {
+        request ??= new DocListRequest();
+
+        using var session = _store.Read();
+        var rows = session.ListDocuments(
+            request.Query,
+            request.Kind is { } kind ? ToWire(kind) : null,
+            request.Retention is { } retention ? ToWire(retention) : null,
+            request.IncludeDeleted,
+            request.Limit);
+
+        var result = new DocListResult { Total = rows.Total };
+        foreach (var row in rows.Items)
+        {
+            var summary = MapDoc(session, row.Doc);
+            summary.Excerpt = Truncate(row.Excerpt, 160);
+            summary.InboundRefCount = row.InboundRefCount;
+            result.Items.Add(summary);
+        }
+
+        return result;
+    }
+
+    public ResolveBatchResult ResolveMany(ResolveBatchRequest request)
+    {
+        ArgumentNullException.ThrowIfNull(request);
+
+        if (request.Uris.Count > 100)
+        {
+            throw new KbException(KbErrorCodes.TooLarge, "单次最多 resolve 100 条 URI。");
+        }
+
+        var result = new ResolveBatchResult();
+        foreach (var uri in request.Uris)
+        {
+            result.Items.Add(Resolve(uri));
+        }
+
+        return result;
+    }
+
+    private static string? Truncate(string? text, int maxChars)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        var value = text.Trim().Replace('\n', ' ');
+        return value.Length <= maxChars ? value : value[..maxChars] + "…";
+    }
+
     public IReadOnlyList<VersionSummary> History(string docId, int limit = 50)
     {
         using var session = _store.Read();

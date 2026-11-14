@@ -1,0 +1,453 @@
+/* KB 查看器的少量补充：按钮复位、三栏文档布局、编辑态与空态。 */
+
+html,
+body {
+    margin: 0;
+    height: 100%;
+    overflow: hidden;
+    background: #0d1117;
+    font-family: var(--font, "Segoe UI", "Microsoft YaHei UI", sans-serif);
+}
+
+/* BlazorWebView 的错误条默认隐藏，只有脚本置为显示时才出现。 */
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    padding: 10px 16px;
+    background: #7f1d1d;
+    color: #fff;
+    font-size: 12.5px;
+}
+
+#blazor-error-ui .reload {
+    color: #fff;
+    margin-left: 12px;
+}
+
+.kb-app {
+    height: 100vh;
+    min-height: 0;
+}
+
+/* 侧栏与列表里的元素用 button 实现可点击，去掉浏览器默认外观。 */
+.kb-app button.nav-item,
+.kb-app button.doc-item,
+.kb-app button.chip,
+.kb-app button.result,
+.kb-app button.cell-link,
+.kb-app button.vnode,
+.kb-app button.check,
+.kb-app button.ref-chip,
+.kb-app a.brand {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    width: 100%;
+    cursor: pointer;
+}
+
+.kb-app button.chip {
+    width: auto;
+}
+
+.kb-app button.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 11px;
+}
+
+.kb-app button.nav-item:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.kb-app button.doc-item {
+    display: block;
+    padding: 12px 12px 11px;
+    border-radius: 10px;
+}
+
+.kb-app button.doc-item:hover {
+    background: var(--surface-hover, rgba(255, 255, 255, 0.04));
+}
+
+.kb-app button.doc-item.active {
+    background: var(--surface-active, rgba(96, 165, 250, 0.12));
+}
+
+.kb-app button.chip.active {
+    color: var(--accent, #60a5fa);
+}
+
+.kb-app button.result {
+    display: block;
+    width: 100%;
+    padding: 16px 18px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    margin-bottom: 10px;
+}
+
+.kb-app button.result:hover {
+    border-color: var(--accent, #60a5fa);
+}
+
+.kb-app button.cell-link {
+    display: block;
+    padding: 0;
+}
+
+.kb-app button.check {
+    width: 18px;
+    height: 18px;
+    border: 1px solid var(--line-strong, rgba(255, 255, 255, 0.25));
+    border-radius: 5px;
+    padding: 0;
+}
+
+.kb-app button.check.on {
+    background: var(--accent, #60a5fa);
+    border-color: var(--accent, #60a5fa);
+}
+
+.kb-app input {
+    background: transparent;
+    border: 0;
+    outline: none;
+    color: inherit;
+    font: inherit;
+    width: 100%;
+}
+
+.kb-app .list-search input {
+    flex: 1;
+    min-width: 0;
+}
+
+/* 文档三栏：正文 + 右栏。 */
+.doc-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 300px;
+    height: 100%;
+    min-height: 0;
+}
+
+.doc-main-col {
+    padding: 26px 34px 80px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.doc-rail {
+    border-left: 1px solid var(--line);
+    background: var(--surface-sunken);
+    padding: 24px 18px 60px;
+    overflow-y: auto;
+    min-height: 0;
+}
+
+.doc-rail .rail-block + .rail-block {
+    margin-top: 22px;
+}
+
+.kb-app .vnode {
+    display: block;
+    padding: 8px 10px;
+    border-radius: 9px;
+    margin-bottom: 4px;
+    border: 1px solid transparent;
+}
+
+.kb-app .vnode:hover {
+    background: var(--surface-hover, rgba(255, 255, 255, 0.04));
+}
+
+.kb-app .vnode.current {
+    border-color: var(--accent, #60a5fa);
+    background: var(--surface-active, rgba(96, 165, 250, 0.12));
+}
+
+.vnode-current {
+    color: var(--accent, #60a5fa);
+}
+
+.ref-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 12px;
+}
+
+.ref-owner {
+    color: var(--muted);
+}
+
+.ref-rel {
+    color: var(--text);
+}
+
+/* 块与编辑态。 */
+.blk {
+    position: relative;
+}
+
+.blk-anchor {
+    position: absolute;
+    top: 6px;
+    right: 0;
+    font-size: 11px;
+    color: var(--muted);
+    opacity: 0;
+    transition: opacity 0.12s ease;
+    pointer-events: none;
+}
+
+.blk:hover .blk-anchor {
+    opacity: 1;
+}
+
+.blk.blk-target {
+    outline: 1px solid var(--accent, #60a5fa);
+    outline-offset: 6px;
+    border-radius: 6px;
+}
+
+.kb-editor {
+    width: 100%;
+    min-height: 140px;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-sunken);
+    color: var(--text);
+    font: inherit;
+    line-height: 1.7;
+    resize: vertical;
+}
+
+.kb-input {
+    width: 100%;
+    margin-top: 8px;
+    padding: 9px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-sunken);
+    color: var(--text);
+}
+
+.kb-edit-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+/* 页面级空态、提示与搜索。 */
+.kb-empty {
+    padding: 24px 18px;
+    color: var(--muted);
+    font-size: 12.5px;
+}
+
+.kb-empty-large {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    text-align: center;
+    gap: 8px;
+}
+
+.kb-empty-large h2 {
+    font-size: 20px;
+    margin: 0;
+    color: var(--text);
+}
+
+.kb-alert {
+    margin: 0 0 16px;
+    padding: 10px 14px;
+    border: 1px solid rgba(245, 158, 11, 0.35);
+    border-radius: 10px;
+    background: rgba(245, 158, 11, 0.08);
+    color: var(--warning, #f59e0b);
+    font-size: 12.5px;
+}
+
+.kb-page {
+    padding: 24px 30px 80px;
+    overflow-y: auto;
+    height: 100%;
+    min-height: 0;
+}
+
+.page-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.page-head h2 {
+    margin: 0 0 6px;
+    font-size: 20px;
+}
+
+.page-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.inbox-summary,
+.result-summary {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 4px 0 12px;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+.inbox-spacer {
+    flex: 1;
+}
+
+.search-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-sunken);
+    margin-bottom: 12px;
+}
+
+.search-bar .btn {
+    flex: none;
+}
+
+.result-head {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    flex-wrap: wrap;
+}
+
+.result-kind {
+    color: var(--muted);
+    font-size: 11.5px;
+}
+
+.result-score {
+    margin-left: auto;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+}
+
+.result-snip {
+    margin: 8px 0 10px;
+    color: var(--text-dim, var(--text));
+    line-height: 1.7;
+    font-size: 13px;
+}
+
+.result-foot {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.hit-reason {
+    color: var(--muted);
+    font-size: 11.5px;
+}
+
+td.is-selected {
+    background: var(--surface-active, rgba(96, 165, 250, 0.1));
+}
+
+@media (max-width: 1180px) {
+    .doc-layout {
+        grid-template-columns: minmax(0, 1fr) 260px;
+    }
+
+    .doc-main-col {
+        padding: 22px 24px 70px;
+    }
+}
+
+/* 1180 宽窗口下，348 列表 + 300 右栏会挤扁正文；右栏改成按需抽屉。 */
+@media (max-width: 1280px) {
+    .kb-split {
+        grid-template-columns: 300px minmax(0, 1fr);
+    }
+
+    .doc-layout {
+        position: relative;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .doc-rail {
+        display: none;
+    }
+
+    .doc-layout.rail-open .doc-rail {
+        display: block;
+        position: absolute;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        width: 300px;
+        z-index: 10;
+        box-shadow: -18px 0 40px rgba(0, 0, 0, 0.35);
+    }
+
+    .doc-main-col {
+        padding: 22px 22px 70px;
+    }
+
+    .doc-rail {
+        padding: 20px 14px 50px;
+    }
+}
+
+@media (max-width: 1080px) {
+    .kb-split {
+        grid-template-columns: 280px minmax(0, 1fr);
+    }
+}
+
+/* 右栏只在窄窗口才需要手动开合。 */
+.rail-toggle {
+    display: none;
+}
+
+@media (max-width: 1280px) {
+    .rail-toggle {
+        display: inline-flex;
+    }
+}
+
+/* 收件箱表格单元里的标题与来源要分两行。 */
+.cell-title,
+.cell-sub {
+    display: block;
+}
+
+.cell-sub {
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 11px;
+}

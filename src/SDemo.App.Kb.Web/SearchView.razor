@@ -1,0 +1,170 @@
+@inject KbService Kb
+
+<div class="kb-col kb-col-main kb-page search-page">
+    <div class="search-bar">
+        <Icons Name="search" />
+        <input placeholder="输入关键词，中文两字即可"
+               @bind="_query"
+               @bind:event="oninput"
+               @onkeydown="OnKey" />
+        <button class="btn btn-primary btn-sm" @onclick="SearchAsync">检索</button>
+    </div>
+
+    <div class="list-chips">
+        @foreach (var scope in Scopes)
+        {
+            <button class="chip @(_scope == scope.Value ? "active" : null)"
+                    @onclick="() => SetScope(scope.Value)">
+                @scope.Label
+            </button>
+        }
+    </div>
+
+    @if (_loading)
+    {
+        <div class="kb-empty"><p>检索中…</p></div>
+    }
+    else if (_error is not null)
+    {
+        <div class="kb-alert">@_error</div>
+    }
+    else if (_response is null)
+    {
+        <div class="kb-empty kb-empty-large">
+            <h2>搜点什么</h2>
+            <p class="muted">默认查当前态；「以前 / 为什么 / 最近」会自动切换索引面。</p>
+        </div>
+    }
+    else if (_response.NoHit)
+    {
+        <div class="kb-empty kb-empty-large">
+            <h2>没有命中</h2>
+            <p class="muted">
+                本次 scope = @KbUi.ScopeLabel(_response.Scope)。可以换关键词，或让 Agent 用目录兜底浏览。
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="result-summary">
+            命中 @_response.Hits.Count 条 · scope = @KbUi.ScopeLabel(_response.Scope)
+            @if (_response.Widened)
+            {
+                <span>· 已放宽 AND</span>
+            }
+        </div>
+
+        @foreach (var hit in _response.Hits)
+        {
+            <button class="result" @onclick="() => OnOpen.InvokeAsync((hit.DocId, hit.BlockId))">
+                <div class="result-head">
+                    <span class="ret @(hit.Retention == RetentionLevel.Durable ? "ret-durable" : "ret-staging")">
+                        <span class="ret-dot"></span>@KbUi.RetentionLabel(hit.Retention)
+                    </span>
+                    <span class="result-title">@hit.Title</span>
+                    <span class="result-kind">@KbUi.KindLabel(hit.Kind) · v@(hit.VersionSeq) · @KbUi.MatchedLabel(hit.Matched)</span>
+                    <span class="result-score">@(hit.Score > 0 ? hit.Score.ToString("0.00") : "命中")</span>
+                </div>
+                <div class="result-snip">@hit.Snippet</div>
+                <div class="result-foot">
+                    @foreach (var term in _response.HitTerms.Take(6))
+                    {
+                        <span class="hit-term">@term</span>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(hit.Rationale))
+                    {
+                        <span class="hit-reason">理由：@hit.Rationale</span>
+                    }
+                </div>
+            </button>
+        }
+    }
+</div>
+
+@code {
+    private static readonly (string Label, SearchScope Value)[] Scopes =
+    [
+        ("当前态", SearchScope.Current),
+        ("历史态", SearchScope.History),
+        ("变更事实", SearchScope.Change),
+        ("含暂存", SearchScope.Recent),
+        ("全部", SearchScope.All),
+    ];
+
+    private string _query = string.Empty;
+    private SearchScope _scope = SearchScope.Current;
+    private KbSearchResponse? _response;
+    private bool _loading;
+    private string? _error;
+    private string? _lastQuery;
+
+    [Parameter] public string Query { get; set; } = string.Empty;
+
+    [Parameter] public EventCallback<(string DocId, string? BlockId)> OnOpen { get; set; }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.Equals(Query, _lastQuery, StringComparison.Ordinal))
+        {
+            _lastQuery = Query;
+            if (!string.IsNullOrWhiteSpace(Query))
+            {
+                _query = Query;
+                await SearchAsync();
+            }
+        }
+    }
+
+    private async Task SetScope(SearchScope scope)
+    {
+        _scope = scope;
+        if (!string.IsNullOrWhiteSpace(_query))
+        {
+            await SearchAsync();
+        }
+    }
+
+    private async Task OnKey(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or "NumpadEnter")
+        {
+            await SearchAsync();
+        }
+    }
+
+    private async Task SearchAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_query))
+        {
+            _response = null;
+            return;
+        }
+
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            var query = _query;
+            var scope = _scope;
+            _response = await Task.Run(() => Kb.Search(new KbSearchRequest
+            {
+                Query = query,
+                Scope = scope,
+                AllowRoute = scope == SearchScope.Current,
+                Limit = 30,
+            }));
+        }
+        catch (Exception ex)
+        {
+            _error = $"检索失败：{ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+}
+
+

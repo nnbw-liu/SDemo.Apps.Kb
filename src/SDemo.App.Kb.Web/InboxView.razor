@@ -1,0 +1,203 @@
+@inject KbService Kb
+
+<div class="kb-col kb-col-main kb-page">
+    <div class="page-head">
+        <div>
+            <h2>待归档收件箱</h2>
+            <p class="muted">暂存内容到期自动清理；归档后全量保留，并解除 TTL。</p>
+        </div>
+        <div class="page-actions">
+            <button class="btn btn-ghost btn-sm" @onclick="LoadAsync"><Icons Name="refresh" />刷新</button>
+            <button class="btn btn-primary btn-sm"
+                    disabled="@(_selected.Count == 0 || _busy)"
+                    @onclick="PromoteSelected">
+                <Icons Name="check" />归档选中（@_selected.Count）
+            </button>
+        </div>
+    </div>
+
+    @if (_message is not null)
+    {
+        <div class="kb-alert">@_message</div>
+    }
+
+    @if (_error is not null)
+    {
+        <div class="kb-alert">@_error</div>
+    }
+
+    @if (_inbox is null || _inbox.Items.Count == 0)
+    {
+        <div class="kb-empty kb-empty-large">
+            <h2>没有待归档内容</h2>
+            <p class="muted">会议纪要、Agent 产物会先进入这里；确认后再归档。</p>
+        </div>
+    }
+    else
+    {
+        <div class="inbox-summary">
+            <span>共 @_inbox.Total 条</span>
+            <span>·</span>
+            <span>@_inbox.ExpiringSoon 条 3 天内到期</span>
+            <span class="inbox-spacer"></span>
+            <button class="btn btn-ghost btn-sm" @onclick="ToggleAll">
+                @(_selected.Count == _inbox.Items.Count ? "取消全选" : "全选")
+            </button>
+        </div>
+
+        <table class="kbtable">
+            <thead>
+                <tr>
+                    <th style="width:34px"></th>
+                    <th>暂存内容</th>
+                    <th>类型</th>
+                    <th>大小</th>
+                    <th>派生</th>
+                    <th>保留</th>
+                    <th style="text-align:right">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in _inbox.Items)
+                {
+                    <tr class="@(_selected.Contains(item.DocId) ? "is-selected" : null)">
+                        <td>
+                            <button class="check @(_selected.Contains(item.DocId) ? "on" : null)"
+                                    title="选择"
+                                    @onclick="() => Toggle(item.DocId)"></button>
+                        </td>
+                        <td>
+                            <button class="cell-link" @onclick="() => OnOpenDoc.InvokeAsync(item.DocId)">
+                                <span class="cell-title">@item.Title</span>
+                                <span class="cell-sub">@item.OwnerApp · v@(item.VersionSeq) · @item.BlockCount 块</span>
+                            </button>
+                        </td>
+                        <td>@KbUi.KindLabel(item.Kind)</td>
+                        <td>
+                            <span>@KbUi.FormatBytes(item.TextChars)</span>
+                            @if (item.BlobBytes > 0)
+                            {
+                                <span class="cell-sub"> · 原件 @KbUi.FormatBytes(item.BlobBytes)</span>
+                            }
+                        </td>
+                        <td>
+                            <span class="status-pill">@DerivedLabel(item.DerivedState)</span>
+                        </td>
+                        <td>
+                            <span class="ret ret-staging"><span class="ret-dot"></span>@KbUi.ExpiryText(item.DaysRemaining)</span>
+                        </td>
+                        <td style="text-align:right">
+                            <button class="btn btn-ghost btn-sm" @onclick="() => PromoteOne(item.DocId)">归档</button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+</div>
+
+@code {
+    private InboxResult? _inbox;
+    private readonly HashSet<string> _selected = [];
+    private bool _busy;
+    private string? _message;
+    private string? _error;
+
+    [Parameter] public EventCallback<string> OnOpenDoc { get; set; }
+
+    [Parameter] public EventCallback OnChanged { get; set; }
+
+    protected override async Task OnInitializedAsync() => await LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        _error = null;
+        try
+        {
+            _inbox = await Task.Run(() => Kb.Inbox(200));
+            _selected.RemoveWhere(id => _inbox.Items.All(item => item.DocId != id));
+        }
+        catch (Exception ex)
+        {
+            _error = $"读取收件箱失败：{ex.Message}";
+        }
+
+        StateHasChanged();
+    }
+
+    private void Toggle(string docId)
+    {
+        if (!_selected.Remove(docId))
+        {
+            _selected.Add(docId);
+        }
+    }
+
+    private void ToggleAll()
+    {
+        if (_inbox is null)
+        {
+            return;
+        }
+
+        if (_selected.Count == _inbox.Items.Count)
+        {
+            _selected.Clear();
+            return;
+        }
+
+        foreach (var item in _inbox.Items)
+        {
+            _selected.Add(item.DocId);
+        }
+    }
+
+    private Task PromoteOne(string docId) => PromoteAsync([docId]);
+
+    private Task PromoteSelected() => PromoteAsync(_selected.ToList());
+
+    private async Task PromoteAsync(IReadOnlyList<string> docIds)
+    {
+        if (docIds.Count == 0 || _busy)
+        {
+            return;
+        }
+
+        _busy = true;
+        _message = null;
+        _error = null;
+
+        try
+        {
+            var result = await Task.Run(() => Kb.PromoteMany(new PromoteBatchRequest
+            {
+                DocIds = docIds.ToList(),
+                Retention = RetentionLevel.Durable,
+                Rationale = "收件箱批量归档",
+            }, "sdemo.kb"));
+
+            _message = $"已归档 {result.Promoted.Count} 条"
+                + (result.Failed.Count > 0 ? $"，失败 {result.Failed.Count} 条" : string.Empty);
+
+            _selected.Clear();
+            await LoadAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"归档失败：{ex.Message}";
+        }
+        finally
+        {
+            _busy = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string DerivedLabel(DerivedState state) => state switch
+    {
+        DerivedState.Pending => "待识别",
+        DerivedState.Failed => "未识别",
+        _ => "已就绪",
+    };
+}

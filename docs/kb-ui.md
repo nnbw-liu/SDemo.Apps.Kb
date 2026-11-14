@@ -1,7 +1,7 @@
 # sdemo.kb 界面设计
 
-> 状态：**设计提案，待拍板**（2026-11-14）
-> 配套：[kb-design.md](kb-design.md)（完整设计）· [ui-mockups/](ui-mockups/)（可打开的原型）
+> 状态：**P4-e 第一刀已实现 01 / 02 / 04 / 06 四屏（2026-11-14）**；03 / 05 / 07 待做。
+> 配套：[kb-design.md](kb-design.md)（完整设计）· [ui-mockups/](ui-mockups/)（可打开的原型）· [kb-ui-spike.md](kb-ui-spike.md)（技术落地）
 > 依赖：[SDemo.Shared 设计系统](../../Shared/UI/SDemo.UI.Blazor/wwwroot/css/sdemo-ui.css)
 
 ---

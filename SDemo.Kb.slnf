@@ -7,6 +7,8 @@
       "src\\SDemo.App.Kb.Core\\SDemo.App.Kb.Core.csproj",
       "src\\SDemo.App.Kb.Mcp\\SDemo.App.Kb.Mcp.csproj",
       "src\\SDemo.App.Kb.Host\\SDemo.App.Kb.Host.csproj",
+      "src\\SDemo.App.Kb.Web\\SDemo.App.Kb.Web.csproj",
+      "src\\SDemo.App.Kb.Viewer\\SDemo.App.Kb.Viewer.csproj",
       "tests\\SDemo.Kb.Tests\\SDemo.Kb.Tests.csproj"
     ]
   }

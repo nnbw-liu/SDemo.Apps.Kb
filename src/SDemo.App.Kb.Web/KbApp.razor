@@ -1,0 +1,196 @@
+@inject KbService Kb
+
+<div class="app-shell kb-app" data-theme="@(_light ? "light" : null)" @onkeydown="OnShellKey">
+    <aside class="sidebar">
+        <a class="brand" href="#" @onclick:preventDefault="true" @onclick='() => SetSection("library")'>
+            <span class="brand-mark">K<span>.</span></span>
+            <span class="brand-copy"><strong>知识库</strong><small>sdemo.kb · 本地</small></span>
+        </a>
+
+        <div class="nav-group-label">库</div>
+        <div class="nav">
+            <button class="nav-item @Active("library")" @onclick='() => SetSection("library")'>
+                <Icons Name="library" />全部文档
+            </button>
+            <button class="nav-item @Active("inbox")" @onclick='() => SetSection("inbox")'>
+                <Icons Name="inbox" />待归档
+                @if (_stagingCount > 0)
+                {
+                    <span class="chip-count">@_stagingCount</span>
+                }
+            </button>
+            <button class="nav-item @Active("search")" @onclick='() => SetSection("search")'>
+                <Icons Name="search" />检索
+            </button>
+        </div>
+
+        <div class="nav-group-label">其它</div>
+        <div class="nav">
+            <button class="nav-item" disabled title="回收站界面在 P4-e 后续">
+                <Icons Name="trash" />回收站
+            </button>
+            <button class="nav-item" disabled title="设置界面在 P4-e 后续">
+                <Icons Name="settings" />设置
+            </button>
+        </div>
+
+        <div class="sidebar-spacer"></div>
+
+        @if (_stagingCount > 0)
+        {
+            <div class="sidebar-note">
+                <div class="sidebar-note-icon"><Icons Name="inbox" /></div>
+                <div>
+                    <strong>@_stagingCount 条暂存待归档</strong>
+                    <p>到期自动清理；归档后全量保留。</p>
+                </div>
+            </div>
+        }
+
+        <div class="sidebar-foot">
+            <div class="avatar">K</div>
+            <div class="sidebar-foot-copy">
+                <strong>本地知识库</strong>
+                <small>v@(KbConstants.AppVersion) · @KbUi.FormatBytes(_stats?.BlobBytes ?? 0)</small>
+            </div>
+            <button class="icon-btn" title="切换主题" @onclick="ToggleTheme"><Icons Name="moon" /></button>
+        </div>
+    </aside>
+
+    <div class="main-column">
+        <header class="topbar">
+            <div class="topbar-title">
+                <span class="eyebrow">Knowledge Base</span>
+                <h1>@SectionTitle</h1>
+                <p class="topbar-desc">@SectionDescription</p>
+            </div>
+            <div class="topbar-actions">
+                <label class="search-box">
+                    <Icons Name="search" />
+                    <input placeholder="搜索文档、块或变更理由"
+                           @ref="_globalSearchInput"
+                           @bind="_globalQuery"
+                           @bind:event="oninput"
+                           @onkeydown="OnGlobalSearchKey" />
+                    <kbd>Ctrl K</kbd>
+                </label>
+                <button class="btn btn-ghost" @onclick="RefreshAll"><Icons Name="refresh" />刷新</button>
+            </div>
+        </header>
+
+        <main class="content kb-content">
+            @switch (_section)
+            {
+                case "inbox":
+                    <InboxView OnOpenDoc="@(docId => OpenDoc(docId))" OnChanged="@RefreshCounts" />
+                    break;
+                case "search":
+                    <SearchView Query="@_searchQuery" OnOpen="@(target => OpenSearchHit(target))" />
+                    break;
+                default:
+                    <LibraryView SelectedDocId="@_selectedDocId" FocusBlockId="@_focusBlockId" OnSelectDoc="@(docId => OpenDoc(docId))" />
+                    break;
+            }
+        </main>
+    </div>
+</div>
+
+@code {
+    private string _section = "library";
+    private string? _selectedDocId;
+    private string? _focusBlockId;
+    private string _globalQuery = string.Empty;
+    private string _searchQuery = string.Empty;
+    private bool _light;
+    private int _stagingCount;
+    private StorageStats? _stats;
+    private ElementReference _globalSearchInput;
+
+    private string SectionTitle => _section switch
+    {
+        "inbox" => "待归档",
+        "search" => "检索",
+        _ => "全部文档",
+    };
+
+    private string SectionDescription => _section switch
+    {
+        "inbox" => "暂存内容到期自动清理；归档后全量保留。",
+        "search" => "四个索引面：当前态 / 历史态 / 变更事实 / 含暂存。",
+        _ when _stats is null => "正在读取本地库…",
+        _ => $"{_stats.DocCount} 篇 · {_stats.StagingCount} 条暂存 · 原件 {KbUi.FormatBytes(_stats.BlobBytes)} · {_stats.BlockCount} 块",
+    };
+
+    protected override async Task OnInitializedAsync() => await RefreshCounts();
+
+    private string Active(string section) => _section == section ? "active" : string.Empty;
+
+    private void SetSection(string section)
+    {
+        _section = section;
+        if (section != "library")
+        {
+            _selectedDocId = null;
+        }
+
+        _ = RefreshCounts();
+    }
+
+    private Task OpenDoc(string docId)
+    {
+        _selectedDocId = docId;
+        _focusBlockId = null;
+        _section = "library";
+        return Task.CompletedTask;
+    }
+
+    private Task OpenSearchHit((string DocId, string? BlockId) target)
+    {
+        _selectedDocId = target.DocId;
+        _focusBlockId = target.BlockId;
+        _section = "library";
+        return Task.CompletedTask;
+    }
+
+    private void ToggleTheme() => _light = !_light;
+
+    private async Task OnShellKey(KeyboardEventArgs args)
+    {
+        if (args.CtrlKey && string.Equals(args.Key, "k", StringComparison.OrdinalIgnoreCase))
+        {
+            await _globalSearchInput.FocusAsync();
+        }
+    }
+
+    private void OnGlobalSearchKey(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or "NumpadEnter")
+        {
+            _searchQuery = _globalQuery;
+            _section = "search";
+        }
+    }
+
+    private async Task RefreshAll()
+    {
+        await RefreshCounts();
+        StateHasChanged();
+    }
+
+    private async Task RefreshCounts()
+    {
+        try
+        {
+            var stats = await Task.Run(Kb.GetStorageStats);
+            _stats = stats;
+            _stagingCount = stats.StagingCount;
+            StateHasChanged();
+        }
+        catch (Exception)
+        {
+            // 首页读统计失败不应阻断界面；后续操作会给出具体错误。
+        }
+    }
+}
+
+

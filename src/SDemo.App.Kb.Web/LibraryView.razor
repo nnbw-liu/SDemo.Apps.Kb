@@ -1,0 +1,150 @@
+@inject KbService Kb
+
+<div class="kb-split">
+    <div class="kb-col kb-col-list">
+        <label class="list-search">
+            <Icons Name="search" />
+            <input placeholder="搜索本库"
+                   @bind="_query"
+                   @bind:event="oninput"
+                   @onkeydown="OnSearchKey" />
+            <kbd>Enter</kbd>
+        </label>
+
+        <div class="list-chips">
+            <button class="chip @(_kind is null ? "active" : null)" @onclick="() => SetKind(null)">
+                全部<span class="chip-count">@(_docs?.Total ?? 0)</span>
+            </button>
+            <button class="chip @(_kind == KbKind.Requirement ? "active" : null)" @onclick="() => SetKind(KbKind.Requirement)">需求</button>
+            <button class="chip @(_kind == KbKind.Decision ? "active" : null)" @onclick="() => SetKind(KbKind.Decision)">决策</button>
+            <button class="chip @(_kind == KbKind.Reference ? "active" : null)" @onclick="() => SetKind(KbKind.Reference)">资料</button>
+            <button class="chip @(_kind == KbKind.Note ? "active" : null)" @onclick="() => SetKind(KbKind.Note)">笔记</button>
+        </div>
+
+        <div class="list-group-label">最近更新</div>
+
+        @if (_error is not null)
+        {
+            <div class="kb-empty"><p>@_error</p></div>
+        }
+        else if (_loading)
+        {
+            <div class="kb-empty"><p>正在读取…</p></div>
+        }
+        else if (_docs is null || _docs.Items.Count == 0)
+        {
+            <div class="kb-empty">
+                <p>库里还没有文档。</p>
+                <p class="muted">先用 <code>kb_import</code> 或 <code>POST /v1/ingest</code> 导一篇。</p>
+            </div>
+        }
+        else
+        {
+            <div class="doc-list">
+                @foreach (var doc in _docs.Items)
+                {
+                    <button class="doc-item @(doc.DocId == SelectedDocId ? "active" : null)"
+                            @onclick="() => OnSelectDoc.InvokeAsync(doc.DocId)">
+                        <div class="doc-item-title">
+                            <Icons Name="file" />
+                            <span>@doc.Title</span>
+                        </div>
+                        <div class="doc-item-sub">@(string.IsNullOrWhiteSpace(doc.Excerpt) ? "（空正文）" : doc.Excerpt)</div>
+                        <div class="doc-item-meta">
+                            <span class="@KbUi.RetentionClass(doc.Retention)"><span class="ret-dot"></span>@KbUi.RetentionLabel(doc.Retention)</span>
+                            @if (doc.InboundRefCount > 0)
+                            {
+                                <span class="ret ret-pinned"><span class="ret-dot"></span>被 @doc.InboundRefCount 处引用</span>
+                            }
+                            <span>@KbUi.KindLabel(doc.Kind)</span><span>·</span>
+                            <span>v@(doc.CurrentVersionSeq)</span><span>·</span>
+                            <span>@KbUi.RelativeTime(doc.UpdatedAt)</span>
+                        </div>
+                    </button>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="kb-col kb-col-main">
+        @if (SelectedDocId is null)
+        {
+            <div class="kb-empty kb-empty-large">
+                <h2>选一篇文档开始阅读</h2>
+                <p class="muted">左侧列表来自本地库；正文、版本、引用与变更理由都在这一个视图里。</p>
+            </div>
+        }
+        else
+        {
+            <DocumentReader DocId="@SelectedDocId" FocusBlockId="@FocusBlockId" OnOpenDoc="@OnSelectDoc" />
+        }
+    </div>
+</div>
+
+@code {
+    private DocListResult? _docs;
+    private string _query = string.Empty;
+    private KbKind? _kind;
+    private bool _loading;
+    private string? _error;
+    private string? _lastQuery;
+
+    [Parameter] public string? SelectedDocId { get; set; }
+
+    [Parameter] public string? FocusBlockId { get; set; }
+
+    [Parameter] public EventCallback<string> OnSelectDoc { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.Equals(_lastQuery, _query, StringComparison.Ordinal))
+        {
+            _lastQuery = _query;
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        _loading = true;
+        _error = null;
+
+        try
+        {
+            _docs = await Task.Run(() => Kb.ListDocuments(new DocListRequest
+            {
+                Query = string.IsNullOrWhiteSpace(_query) ? null : _query,
+                Kind = _kind,
+                Limit = 300,
+            }));
+        }
+        catch (Exception ex)
+        {
+            _error = $"读取文档列表失败：{ex.Message}";
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SetKind(KbKind? kind)
+    {
+        _kind = kind;
+        await LoadAsync();
+    }
+
+    private async Task OnSearchKey(KeyboardEventArgs args)
+    {
+        if (args.Key is "Enter" or "NumpadEnter")
+        {
+            await LoadAsync();
+        }
+    }
+}
+

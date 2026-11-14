@@ -1,0 +1,40 @@
+<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <!-- 查看器：WPF + BlazorWebView。按选项 A 内嵌 KbServer，是唯一的 UI 组合根。 -->
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.19041.0</SupportedOSPlatformVersion>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>SDemo.App.Kb.Viewer</RootNamespace>
+    <AssemblyName>SDemo.Kb.Viewer</AssemblyName>
+    <Product>SDemo KB</Product>
+    <AssemblyTitle>SDemo KB</AssemblyTitle>
+    <Description>sdemo.kb · 本地知识库查看器</Description>
+    <Version>0.1.0</Version>
+    <FileVersion>0.1.0.0</FileVersion>
+    <NoWarn>$(NoWarn);ASP0000</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Wpf" Version="10.0.110" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SDemo.App.Kb.Contracts\SDemo.App.Kb.Contracts.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Storage\SDemo.App.Kb.Storage.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Core\SDemo.App.Kb.Core.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Host\SDemo.App.Kb.Host.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Web\SDemo.App.Kb.Web.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="wwwroot\**\*"
+             CopyToOutputDirectory="PreserveNewest"
+             CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

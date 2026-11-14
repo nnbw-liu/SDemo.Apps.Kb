@@ -58,7 +58,43 @@ public sealed class DocSummary
     /// <summary>staging 的到期时间；durable 为 null。</summary>
     public DateTimeOffset? ExpiresAt { get; set; }
 
+    /// <summary>列表摘要：当前版本第一段非标题正文，最多 160 字符。</summary>
+    public string? Excerpt { get; set; }
+
+    /// <summary>有多少条引用指向它（影响面红点用）。</summary>
+    public int InboundRefCount { get; set; }
+
     public int BlockCount { get; set; }
+}
+
+public sealed class DocListRequest
+{
+    public string? Query { get; set; }
+
+    public KbKind? Kind { get; set; }
+
+    public RetentionLevel? Retention { get; set; }
+
+    public bool IncludeDeleted { get; set; }
+
+    public int Limit { get; set; } = 100;
+}
+
+public sealed class DocListResult
+{
+    public List<DocSummary> Items { get; set; } = [];
+
+    public int Total { get; set; }
+}
+
+public sealed class ResolveBatchRequest
+{
+    public List<string> Uris { get; set; } = [];
+}
+
+public sealed class ResolveBatchResult
+{
+    public List<ResolveResult> Items { get; set; } = [];
 }
 
 public sealed class VersionSummary

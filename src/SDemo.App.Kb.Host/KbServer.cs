@@ -172,7 +172,7 @@ public sealed class KbServer : IDisposable
 
             // 权限矩阵（kb-design §5.3）：写面归各 App；promote / retract / 收件箱 / 统计 / 设置 / MCP 只给 KB 与 Agent。
             var privilegedOnly = path is "/v1/promote" or "/v1/retract" or "/v1/promote-batch"
-                or "/v1/inbox" or "/v1/stats" or "/v1/settings/retention" or "/v1/maintain" or "/mcp";
+                or "/v1/inbox" or "/v1/stats" or "/v1/settings/retention" or "/v1/maintain" or "/v1/docs" or "/mcp";
 
             if (privilegedOnly && !KbService.IsPrivileged(appId))
             {
@@ -244,6 +244,33 @@ public sealed class KbServer : IDisposable
 
                     var result = _service.Resolve(uri ?? string.Empty);
                     await WriteJsonAsync(response, result.Exists ? 200 : 404, result).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/resolve-batch" when IsPost(request):
+                {
+                    var body = await ReadBodyAsync(request).ConfigureAwait(false);
+                    var payload = KbJson.Deserialize<ResolveBatchRequest>(body)
+                        ?? throw KbException.Invalid("请求体为空。");
+                    await WriteJsonAsync(response, 200, _service.ResolveMany(payload)).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/docs":
+                {
+                    var query = request.QueryString["q"];
+                    var kind = request.QueryString["kind"];
+                    var retention = request.QueryString["retention"];
+                    var list = _service.ListDocuments(new DocListRequest
+                    {
+                        Query = query,
+                        Kind = string.IsNullOrWhiteSpace(kind) ? null : Enum.Parse<KbKind>(kind, ignoreCase: true),
+                        Retention = string.IsNullOrWhiteSpace(retention) ? null : Enum.Parse<RetentionLevel>(retention, ignoreCase: true),
+                        IncludeDeleted = string.Equals(request.QueryString["includeDeleted"], "true", StringComparison.OrdinalIgnoreCase),
+                        Limit = int.TryParse(request.QueryString["limit"], out var parsedLimit) ? parsedLimit : 100,
+                    });
+
+                    await WriteJsonAsync(response, 200, list).ConfigureAwait(false);
                     return;
                 }
 

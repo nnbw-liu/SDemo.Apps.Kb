@@ -106,6 +106,10 @@ public sealed record InboxRow(
     long TextChars,
     long BlobBytes);
 
+public sealed record DocListRow(DocRow Doc, string? Excerpt, int InboundRefCount);
+
+public sealed record DocListRows(IReadOnlyList<DocListRow> Items, int Total);
+
 public sealed record BlobRow(string Sha256, string? Mime, long Size, string? Name, string? StoredPath);
 
 public sealed record StorageCounters(

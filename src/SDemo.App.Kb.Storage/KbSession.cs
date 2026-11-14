@@ -365,6 +365,94 @@ public sealed class KbSession : IDisposable
         return rows;
     }
 
+    /// <summary>列表页：摘要 + 引用数 + 标题/正文过滤。查询走 LIKE，规模在万级以内足够。</summary>
+    public DocListRows ListDocuments(
+        string? query,
+        string? kind,
+        string? retention,
+        bool includeDeleted,
+        int limit)
+    {
+        var where = new StringBuilder("WHERE 1 = 1");
+        var parameters = new List<(string, object?)>();
+
+        if (!includeDeleted)
+        {
+            where.Append(" AND d.deleted_at IS NULL");
+        }
+
+        if (!string.IsNullOrWhiteSpace(kind))
+        {
+            where.Append(" AND d.kind = $kind");
+            parameters.Add(("$kind", kind));
+        }
+
+        if (!string.IsNullOrWhiteSpace(retention))
+        {
+            where.Append(" AND d.retention = $retention");
+            parameters.Add(("$retention", retention));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query))
+        {
+            where.Append(
+                """
+                 AND (
+                   d.title LIKE $q ESCAPE '\'
+                   OR EXISTS (
+                     SELECT 1 FROM kb_block_edge e JOIN kb_block b ON b.id = e.block_id
+                     WHERE e.version_id = d.current_version_id AND b.text LIKE $q ESCAPE '\'
+                   )
+                 )
+                """);
+            parameters.Add(("$q", "%" + EscapeLike(query.Trim()) + "%"));
+        }
+
+        var total = 0;
+        using (var count = Command($"SELECT COUNT(*) FROM kb_doc d {where}", parameters.ToArray()))
+        {
+            total = Convert.ToInt32(count.ExecuteScalar(), CultureInfo.InvariantCulture);
+        }
+
+        var listParameters = new List<(string, object?)>(parameters)
+        {
+            ("$limit", Math.Clamp(limit, 1, 500)),
+        };
+
+        using var command = Command(
+            $"""
+            SELECT d.id, d.kind, d.title, d.owner_app, d.entity_uri, d.uri, d.retention, d.derived_state,
+                   d.current_version_id, d.created_at, d.updated_at, d.deleted_at, d.expires_at, d.purged_at,
+                   (SELECT b.text
+                      FROM kb_block_edge e JOIN kb_block b ON b.id = e.block_id
+                     WHERE e.version_id = d.current_version_id AND b.is_heading = 0
+                     ORDER BY e.ordinal ASC LIMIT 1) AS excerpt,
+                   (SELECT COUNT(*) FROM kb_link l WHERE l.target_doc_id = d.id) AS refs
+            FROM kb_doc d
+            {where}
+            ORDER BY d.updated_at DESC
+            LIMIT $limit
+            """,
+            listParameters.ToArray());
+
+        using var reader = command.ExecuteReader();
+        var rows = new List<DocListRow>();
+        while (reader.Read())
+        {
+            rows.Add(new DocListRow(
+                ReadDoc(reader),
+                reader.IsDBNull(14) ? null : reader.GetString(14),
+                reader.GetInt32(15)));
+        }
+
+        return new DocListRows(rows, total);
+    }
+
+    private static string EscapeLike(string value) =>
+        value.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("%", "\\%", StringComparison.Ordinal)
+            .Replace("_", "\\_", StringComparison.Ordinal);
+
     // ---------------------------------------------------------------- 版本
 
     public void InsertVersion(VersionRow row) => Execute(

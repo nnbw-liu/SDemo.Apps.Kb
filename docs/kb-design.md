@@ -1,8 +1,8 @@
 # sdemo.kb 完整设计（v1 提案）
 
-> 状态：**已拍板；P4-a 地基 + P4-b 保留已按本设计落地（2026-11-14）**。§2.1 schema、§3 写入面、§4 保留、§5.2 MCP 工具面均已实现并有测试覆盖；P4-c/d 见 §10。
+> 状态：**已拍板；P4-a 地基 + P4-b 保留 + P4-e 查看器第一刀已按本设计落地（2026-11-14）**。§2.1 schema、§3 写入面、§4 保留、§5.2 MCP 工具面均已实现并有测试覆盖；P4-c/d 与 P4-e 剩余屏见 §10。
 > 取代/合并：[kb-versioning.md](kb-versioning.md)（版本与追溯，仍有效）· [requirements.md](requirements.md)（需求编号）
-> 配套：[kb-ui.md](kb-ui.md)（界面设计）· [ui-mockups/](ui-mockups/)（可点原型）· [kb-ui-spike.md](kb-ui-spike.md)（P4-e 技术 spike）· [kb-ingest 契约](#3-写入面)
+> 配套：[kb-ui.md](kb-ui.md)（界面设计）· [ui-mockups/](ui-mockups/)（可点原型）· [kb-ui-spike.md](kb-ui-spike.md)（P4-e 技术落地）· [kb-ingest 契约](#3-写入面)
 > 关联：[跨产品联动](../../docs/integration.md) · [Hub 契约](../../docs/contracts/hub-protocol.md) · [设计系统](../../docs/shared.md)
 
 ---

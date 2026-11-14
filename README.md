@@ -3,7 +3,7 @@
 **sdemo.kb**：个人文档的版本、差异、检索与引用追溯。只存只找，**不持有模型凭证**。
 
 > 本仓是 [SDemo 主仓](https://github.com/nnbw-liu/SDemo) 的子模块（`Kb/`，主仓根级）。
-> 状态：**P4-a 地基 + P4-b 保留已实现并验收**（2026-11-14）——五件套工程、`SDemo.Kb.slnf`、49 个测试。
+> 状态：**P4-a 地基 + P4-b 保留 + P4-e 查看器第一刀**（2026-11-14）——七工程、`SDemo.Kb.slnf`、52 个测试。
 >
 > **定位**：KB 不是一个应用，而是一块数据面 + 一个查看器。它与 DesktopAgent、DesktopAssembly 同级，**不挂在 `Apps/` 下**——写面是给所有应用用的协议，读面才是产品。
 
@@ -11,18 +11,19 @@
 
 | 能力 | 入口 |
 | --- | --- |
+| 打开本地库阅读文档 | `SDemo.Kb.Viewer.exe`（01 库 / 02 文档） |
 | 导入 md / txt，建不可变 `v1` | `kb_import` / `POST /v1/ingest` |
-| 块级修订（add / replace / remove） | `kb_update` / `POST /v1/revise` |
-| 中文两字检索 + 当前 / 历史 / 变更三面路由 | `kb_search` |
+| 块级修订（add / replace / remove） | 查看器「编辑块」 / `kb_update` / `POST /v1/revise` |
+| 中文两字检索 + 当前 / 历史 / 变更三面路由 | 查看器「检索」 / `kb_search` |
 | 块级 + 词级 diff | `kb_diff` |
-| 变更理由 `rationale` | `kb_changes` |
-| 引用 `docId@v<seq>#<blockId>` + 影响面反查 | `kb_refs` / `POST /v1/resolve` |
+| 变更理由 `rationale` | 文档右栏 / `kb_changes` |
+| 引用 `docId@v<seq>#<blockId>` + 影响面反查 | 文档右栏 / `kb_refs` / `POST /v1/resolve` |
 | AI 写摘要（不调模型） | `kb_annotate` |
 | 暂存 TTL / 回收站 / 引用保护 / 块与原件 GC | 后台维护 / `--maintain` |
-| 待归档收件箱 + 批量归档 + 存储统计 | `/v1/inbox` `/v1/promote-batch` `/v1/stats` |
+| 待归档收件箱 + 批量归档 + 存储统计 | 查看器「待归档」 / `/v1/inbox` `/v1/stats` |
 | KB 离线时写入不丢 | `KbOutbox` + `KbIngestClient` |
 
-未做：docx / pptx / xlsx / pdf 解析（P4-d）、KB 查看器界面（P4-e，[技术 spike](docs/kb-ui-spike.md)）、向量检索（P4+）。
+未做：03 版本对比 / 05 导入 / 07 设置屏、docx / pptx / xlsx / pdf 解析（P4-d）、命名修订与多父合并（P4-c）、向量检索（P4+）。
 
 ## 快速开始
 
@@ -30,7 +31,10 @@
 dotnet build SDemo.Kb.slnf -c Release
 dotnet test  tests\SDemo.Kb.Tests -c Release
 
-# 启动回环数据面；runtime 写到 %LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb.json
+# 打开查看器（内嵌数据面；默认 %APPDATA%\SDemo\Apps\sdemo.kb）
+src\SDemo.App.Kb.Viewer\bin\Release\net10.0-windows10.0.19041.0\SDemo.Kb.Viewer.exe
+
+# 无界面数据面（给 Agent / App 用）
 src\SDemo.App.Kb.Host\bin\Release\net10.0\SDemo.Kb.exe
 
 # 给某个 App 签写入 token（stdout）
@@ -62,15 +66,17 @@ Content-Type: application/json
 | `src/SDemo.App.Kb.Storage` | SQLite + FTS5 + 2-gram |
 | `src/SDemo.App.Kb.Core` | 版本链 / 块 / diff / 检索 / 引用 / outbox |
 | `src/SDemo.App.Kb.Mcp` | 11 个 `kb_*` 工具 + JSON-RPC |
-| `src/SDemo.App.Kb.Host` | 回环 HTTP + CLI |
-| `tests/SDemo.Kb.Tests` | 版本链 / 检索 / diff / 引用 / MCP / HTTP / outbox |
+| `src/SDemo.App.Kb.Host` | 回环 HTTP（写面 / resolve / MCP）+ CLI |
+| `src/SDemo.App.Kb.Web` | 查看器 Razor 组件（四屏） |
+| `src/SDemo.App.Kb.Viewer` | WPF + BlazorWebView 组合根（内嵌 KbServer） |
+| `tests/SDemo.Kb.Tests` | 版本链 / 检索 / diff / 引用 / MCP / HTTP / outbox / 保留 |
 
 ## 文档
 
 | 想知道 | 读 |
 | --- | --- |
 | 完整设计（写入面 / 保留 / 检索 / 产物） | [docs/kb-design.md](docs/kb-design.md) |
-| 界面设计与原型 | [docs/kb-ui.md](docs/kb-ui.md) · [docs/ui-mockups/](docs/ui-mockups/) |
+| 界面设计与原型 | [docs/kb-ui.md](docs/kb-ui.md) · [docs/ui-mockups/](docs/ui-mockups/) · [UI 技术落地](docs/kb-ui-spike.md) |
 | 需求计划（KB-01–13、分期、验收） | [docs/requirements.md](docs/requirements.md) |
 | 版本链、块级差异、三索引面 | [docs/kb-versioning.md](docs/kb-versioning.md) |
 | 需求原文与优先级 | [../docs/sdemo-brand-blueprint.md](../docs/sdemo-brand-blueprint.md) §C |
