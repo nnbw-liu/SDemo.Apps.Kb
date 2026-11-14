@@ -44,4 +44,13 @@ public static class KbConstants
 
     /// <summary>标题在 BM25 里的权重倍数（与 workspace-memory 的 ×4 对齐）。</summary>
     public const int TitleTermWeight = 4;
+
+    /// <summary>首次启动自动签发 token 的 App 白名单；新增写入方要同时加到这里。</summary>
+    public static readonly string[] ProvisionedApps =
+    [
+        AppId,
+        "sdemo.agent",
+        "sdemo.planner",
+        "sdemo.meeting",
+    ];
 }

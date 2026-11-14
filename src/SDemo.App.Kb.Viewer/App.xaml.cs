@@ -35,10 +35,20 @@ public partial class App : Application
         var database = new KbDatabase(dataDirectory);
         var store = new KbStore(database);
         var service = new KbService(store, new KbBlobStore(database.DataDirectory));
+        var tokens = new KbTokenProvisioner(service);
+
+        try
+        {
+            tokens.EnsureAll();
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"[kb] token provisioning failed: {ex.Message}");
+        }
 
         _server = new KbServer(service);
         _server.Start();
-        KbRuntimeFile.Write(_server.Port, database.DataDirectory);
+        KbRuntimeFile.Write(_server.Port, database.DataDirectory, tokens.Directory);
 
         var window = new MainWindow(service);
         MainWindow = window;

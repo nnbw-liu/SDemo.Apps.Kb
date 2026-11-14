@@ -16,11 +16,24 @@ if (options.ShowHelp)
 var database = new KbDatabase(options.DataDirectory);
 var store = new KbStore(database);
 var service = new KbService(store, new KbBlobStore(database.DataDirectory));
+var tokenProvisioner = new KbTokenProvisioner(service);
 
 if (options.IssueTokenFor is { Length: > 0 } appId)
 {
-    var token = service.IssueToken(appId);
-    Console.WriteLine(token);
+    var info = tokenProvisioner.Issue(appId);
+    Console.WriteLine(tokenProvisioner.ReadToken(appId));
+    Console.Error.WriteLine($"token 文件：{info.Path}");
+    return 0;
+}
+
+if (options.ListTokens)
+{
+    foreach (var info in tokenProvisioner.List())
+    {
+        var token = info.Exists ? tokenProvisioner.ReadToken(info.AppId) : null;
+        Console.WriteLine($"{info.AppId}\t{info.Path}\t{(token ?? "(未签发)")}");
+    }
+
     return 0;
 }
 
@@ -38,9 +51,13 @@ if (options.Maintain)
     return 0;
 }
 
+// 首次启动给白名单 App 各签一个 token；已有且仍有效的文件不动。
+var provisioned = tokenProvisioner.EnsureAll();
+Console.WriteLine($"token 目录：{tokenProvisioner.Directory}（{provisioned.Count} 个 App）");
+
 using var server = new KbServer(service);
 server.Start(options.Port);
-KbRuntimeFile.Write(server.Port, database.DataDirectory);
+KbRuntimeFile.Write(server.Port, database.DataDirectory, tokenProvisioner.Directory);
 
 using var maintenanceCts = new CancellationTokenSource();
 var maintenanceTask = Task.Run(async () =>
@@ -115,6 +132,8 @@ internal sealed class HostOptions
 
     public bool Maintain { get; private set; }
 
+    public bool ListTokens { get; private set; }
+
     public bool ShowHelp { get; private set; }
 
     public static HostOptions Parse(string[] args)
@@ -150,6 +169,10 @@ internal sealed class HostOptions
                     options.Maintain = true;
                     break;
 
+                case "--tokens":
+                    options.ListTokens = true;
+                    break;
+
                 default:
                     if (arg.StartsWith("--data-dir=", StringComparison.Ordinal))
                     {
@@ -174,7 +197,8 @@ internal sealed class HostOptions
 
             用法：
               SDemo.Kb [--data-dir <目录>] [--port <端口>]
-              SDemo.Kb --issue-token <appId>        签发某个 app 的写入 token 并退出
+              SDemo.Kb --issue-token <appId>        签发/轮换某个 app 的写入 token 并退出
+              SDemo.Kb --tokens                     列出所有 app token 文件与明文
               SDemo.Kb --rebuild-index              整库重建 FTS 索引并退出
               SDemo.Kb --maintain                   跑一次 TTL / 回收站 / GC 并退出
 

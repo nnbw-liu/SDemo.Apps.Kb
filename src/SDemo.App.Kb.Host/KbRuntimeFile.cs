@@ -7,7 +7,7 @@ namespace SDemo.App.Kb.Host;
 /// <summary>运行期连接信息：只写回环地址与端口，不写任何旧 token。</summary>
 public static class KbRuntimeFile
 {
-    public static void Write(int port, string dataDirectory)
+    public static void Write(int port, string dataDirectory, string? tokenDirectory = null)
     {
         Directory.CreateDirectory(KbPaths.RuntimeDirectory);
 
@@ -20,9 +20,11 @@ public static class KbRuntimeFile
             appVersion = KbConstants.AppVersion,
             ingestUrl = $"http://127.0.0.1:{port}{KbConstants.IngestPath}",
             resolveUrl = $"http://127.0.0.1:{port}{KbConstants.ResolvePath}",
+            refsUrl = $"http://127.0.0.1:{port}/v1/refs",
             mcpUrl = $"http://127.0.0.1:{port}{KbConstants.McpPath}",
             healthUrl = $"http://127.0.0.1:{port}{KbConstants.HealthPath}",
             dataDirectory,
+            tokenDirectory = tokenDirectory ?? KbPaths.TokenDirectory,
         };
 
         var path = KbPaths.RuntimeFile();

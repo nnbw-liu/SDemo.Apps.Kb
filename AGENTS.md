@@ -20,7 +20,7 @@
 
 ## 现状（2026-11-14）
 
-✅ **P4-a 地基 + P4-b 保留 + P4-e 第一刀（查看器四屏）已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 58 个测试。
+✅ **P4-a 地基 + P4-b 保留 + P4-e 第一刀（查看器四屏）已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 62 个测试。
 
 | 已做 | 说明 |
 | --- | --- |
@@ -38,8 +38,10 @@
 | **保留与 GC** | staging TTL（会议 30 / Agent 90，可被 `ttlDays` 覆盖）→ 软删 → 回收站 7 天 → 块/原件 GC；被引用文档整篇保护 |
 | **待归档与统计** | `/v1/inbox`（到期倒计时、正文/原件体积）、`/v1/promote-batch`、`/v1/stats`、`/v1/settings/retention`；Host 每小时维护，`--maintain` 手动跑 |
 | **查看器** | WPF + BlazorWebView（选项 A：内嵌 KbServer）；01 全部文档 / 02 文档详情（含版本链、引用、变更理由、块编辑）/ 04 待归档 / 06 检索；深浅色、Ctrl K |
+| **token 分发** | Host/Viewer 首次启动给白名单 App 各签一个 token，落到 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\<appId>.token`；`--tokens` 可列明文；`--issue-token` 轮换并覆盖 |
+| **Planner 引用登记** | Planner 的 `KbRefSyncLoop` 每 30s 读 `link` 表，把 `sdemo.kb/doc/...@v#b` 通过 `/v1/refs` 登记/撤销；KB 未启动时自动跳过 |
 
-**未做（按分期）**：03 版本对比、05 导入、07 设置屏（P4-e 后半）；docx / pptx / xlsx / pdf 解析与 anchor（P4-d）；命名修订与多父合并（P4-c）；Planner/Meeting 侧的 `/v1/refs` 自动登记（KB 契约已完成，App 接入待做）；向量检索（P4+）。
+**未做（按分期）**：03 版本对比、05 导入、07 设置屏（P4-e 后半）；docx / pptx / xlsx / pdf 解析与 anchor（P4-d）；命名修订与多父合并（P4-c）；Meeting 侧的 `/v1/refs` 自动登记（Meeting 尚无 `src/`）；向量检索（P4+）。
 
 ## 工程结构
 
@@ -65,12 +67,22 @@ dotnet test  tests\SDemo.Kb.Tests -c Release
 # 启动数据面（默认 %APPDATA%\SDemo\Apps\sdemo.kb）
 src\SDemo.App.Kb.Host\bin\Release\net10.0\SDemo.Kb.exe
 SDemo.Kb.exe --data-dir <目录> --port <端口>
-SDemo.Kb.exe --issue-token sdemo.meeting     # 签写入 token（stdout）
+SDemo.Kb.exe --issue-token sdemo.meeting     # 签/轮换 token 并写文件
+SDemo.Kb.exe --tokens                        # 列出所有 App token 文件与明文
 SDemo.Kb.exe --rebuild-index                 # 整库重建 FTS
 SDemo.Kb.exe --maintain                      # 跑一次 TTL / 回收站 / GC
 ```
 
 运行期连接信息写到 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb.json`（不含 token）。
+
+### token 分发
+
+- 首次启动（Host 或 Viewer）给 `KbConstants.ProvisionedApps` 里每个 App 签 token，写到
+  `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\<appId>.token`，内容是 token 明文，一行。
+- `sdemo.kb.json` 运行期文件里带 `tokenDirectory` 与 `refsUrl`，App 不需要猜端口。
+- 已有文件且仍能通过 `KbService.Authenticate` 校验时不动；文件丢失 / DB 轮换后下次启动重新签发，旧 token 失效。
+- `--tokens` 打印 `appId<TAB>路径<TAB>明文`；`--issue-token <appId>` 主动轮换并覆盖文件。
+- 安全边界：文件落在 `%LOCALAPPDATA%`（默认随用户配置 ACL 隔离），不写日志、不进仓；未来多用户/漫游场景要显式收紧 ACL 与轮换。
 
 ### 查看器
 

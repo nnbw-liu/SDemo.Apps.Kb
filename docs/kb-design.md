@@ -119,6 +119,10 @@ MCP 是"给模型看的工具面"。把写放进去，等于：
 | 发现 | `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb.json`（KB 是普通接入方，不搞特殊） |
 | 只监听 | 回环；拒绝非 127.0.0.1 |
 
+token 只存 sha256 在 `kb_token`；明文在首次启动时写到
+`%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\<appId>.token`，App 直接读文件。
+已有且仍有效时启动不轮换；`--tokens` 查看、`--issue-token` 轮换。
+
 ### 3.3 四个动词
 
 ```

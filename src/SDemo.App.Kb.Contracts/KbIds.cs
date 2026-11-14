@@ -42,4 +42,12 @@ public static class KbPaths
 
     public static string RuntimeFile(string appId = KbConstants.AppId) =>
         Path.Combine(RuntimeDirectory, appId + ".json");
+
+    /// <summary>
+    /// per-app token 的落盘目录。放在 LOCALAPPDATA 下，随用户配置 ACL 隔离；
+    /// 文件名固定为 <c>&lt;appId&gt;.token</c>，内容是 token 明文。
+    /// </summary>
+    public static string TokenDirectory => Path.Combine(RuntimeDirectory, KbConstants.AppId, "tokens");
+
+    public static string TokenFile(string appId) => Path.Combine(TokenDirectory, appId + ".token");
 }

@@ -3,7 +3,7 @@
 **sdemo.kb**：个人文档的版本、差异、检索与引用追溯。只存只找，**不持有模型凭证**。
 
 > 本仓是 [SDemo 主仓](https://github.com/nnbw-liu/SDemo) 的子模块（`Kb/`，主仓根级）。
-> 状态：**P4-a 地基 + P4-b 保留 + P4-e 查看器第一刀**（2026-11-14）——七工程、`SDemo.Kb.slnf`、58 个测试。
+> 状态：**P4-a 地基 + P4-b 保留 + P4-e 查看器第一刀 + token 分发/Planner 引用登记**（2026-11-14）——七工程、`SDemo.Kb.slnf`、62 个测试。
 >
 > **定位**：KB 不是一个应用，而是一块数据面 + 一个查看器。它与 DesktopAgent、DesktopAssembly 同级，**不挂在 `Apps/` 下**——写面是给所有应用用的协议，读面才是产品。
 
@@ -19,6 +19,7 @@
 | 变更理由 `rationale` | 文档右栏 / `kb_changes` |
 | 引用 `docId@v<seq>#<blockId>` + 影响面反查 | 文档右栏 / `kb_refs` / `POST /v1/resolve` |
 | 外部实体登记引用（Planner/Meeting） | `POST /v1/refs` / `POST /v1/refs/retract` |
+| 自动给 App 发 token | 首次启动写 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\*.token`；`--tokens` 查看 |
 | AI 写摘要（不调模型） | `kb_annotate` |
 | 暂存 TTL / 回收站 / 引用保护 / 块与原件 GC | 后台维护 / `--maintain` |
 | 待归档 + 批量归档 + 存储统计 | 查看器「待归档」 / `/v1/inbox` `/v1/stats` |
@@ -38,9 +39,15 @@ src\SDemo.App.Kb.Viewer\bin\Release\net10.0-windows10.0.19041.0\SDemo.Kb.Viewer.
 # 无界面数据面（给 Agent / App 用）
 src\SDemo.App.Kb.Host\bin\Release\net10.0\SDemo.Kb.exe
 
-# 给某个 App 签写入 token（stdout）
+# 给某个 App 签/轮换写入 token（同时写文件）
 SDemo.Kb.exe --issue-token sdemo.meeting
+# 查看所有 App 的 token 文件路径与明文
+SDemo.Kb.exe --tokens
 ```
+
+token 文件在 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\<appId>.token`：
+`sdemo.kb` / `sdemo.agent` / `sdemo.planner` / `sdemo.meeting` 首次启动自动签发。
+`sdemo.kb.json` 运行期文件里的 `tokenDirectory` 指向同一目录。
 
 写一笔：
 
