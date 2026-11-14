@@ -21,6 +21,8 @@
 | 改什么 | 读 |
 | --- | --- |
 | 需求与验收 | [docs/requirements.md](docs/requirements.md) |
+| **完整设计（写入面 / 保留 / 检索 / 产物）** | [docs/kb-design.md](docs/kb-design.md) |
+| **界面设计与原型** | [docs/kb-ui.md](docs/kb-ui.md) · [docs/ui-mockups/](docs/ui-mockups/) |
 | 版本链 / 块 / diff / 索引面 | [docs/kb-versioning.md](docs/kb-versioning.md) |
 | 跨应用引用 / 统一搜索 | [../../docs/integration.md](../../docs/integration.md) |
 | 组件与宿主 | [../../docs/contracts/](../../docs/contracts/) |

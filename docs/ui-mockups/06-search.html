@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>sdemo.kb · 检索</title>
+<link rel="stylesheet" href="sdemo-ui.css">
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<div class="app-shell">
+  
+    <aside class="sidebar">
+      <a class="brand" href="#">
+        <span class="brand-mark">K<span>.</span></span>
+        <span class="brand-copy"><strong>知识库</strong><small>sdemo.kb · 本地</small></span>
+      </a>
+
+      <div class="nav-group-label">库</div>
+      <div class="nav">
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z'/><path d='M14 3v6h6'/><path d='M8 13h8M8 17h5'/></svg>全部文档</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M4 13h4l1.5 3h5L16 13h4'/><path d='M5 5h14l2 8v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4z'/></svg>待归档<span class="chip-count">12</span></a>
+        <a class="nav-item active" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='11' cy='11' r='7'/><path d='m20 20-4-4'/></svg>检索</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 16V4'/><path d='m7 9 5-5 5 5'/><path d='M4 20h16'/></svg>导入</a>
+      </div>
+
+      <div class="nav-group-label">分类</div>
+      <div class="nav">
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='5'/><circle cx='12' cy='12' r='1'/></svg>需求</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x='3' y='5' width='18' height='16' rx='2.5'/><path d='M8 3v4M16 3v4M3 10h18'/></svg>会议纪要</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='m5 12 4.5 4.5L19 7'/></svg>决策</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z'/></svg>资料</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'/></svg>笔记</a>
+      </div>
+
+      <div class="nav-group-label">其它</div>
+      <div class="nav">
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M4 7h16'/><path d='M9 7V4h6v3'/><path d='M6 7l1 13h10l1-13'/><path d='M10 11v5M14 11v5'/></svg>回收站</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z'/></svg>设置</a>
+      </div>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="sidebar-note">
+        <div class="sidebar-note-icon"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z'/></svg></div>
+        <div>
+          <strong>12 条暂存待归档</strong>
+          <p>30 天后自动清理；归档后全量保留。</p>
+        </div>
+      </div>
+
+      <div class="sidebar-foot">
+        <div class="avatar">L</div>
+        <div class="sidebar-foot-copy">
+          <strong>本地知识库</strong>
+          <small>v0.1.0 · 2.4 GB</small>
+        </div>
+        <button class="icon-btn" title="主题"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'/></svg></button>
+      </div>
+    </aside>
+    
+  <div class="main-column">
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="eyebrow">Knowledge Base</span>
+        <h1>检索</h1>
+        <p class="topbar-desc">FTS5 + 2-gram · 三个索引面按意图路由 · 每条结果都能说清为什么命中</p>
+      </div>
+      <div class="topbar-actions"><button class="btn btn-ghost"><svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M3 5h18l-7 8v6l-4 2v-8z'/></svg>过滤</button><button class="btn btn-primary"><svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z'/></svg>问 Agent</button></div>
+    </header>
+    <main class="content kb-content"><div class="kb-col kb-col-main">
+<label class="search-box" style="width:100%;height:44px;padding:0 14px;font-size:14px">
+  <svg class="icon" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='11' cy='11' r='7'/><path d='m20 20-4-4'/></svg>
+  <input value="中文分词">
+  <kbd>Enter</kbd>
+</label>
+
+<div class="btn-row" style="margin:14px 0 4px">
+  <div class="segmented">
+    <button class="active">当前态</button>
+    <button>历史态</button>
+    <button>变更事实</button>
+    <button>含暂存</button>
+  </div>
+  <span class="push-right"></span>
+  <span class="muted" style="font-size:10.5px">关键词路由：出现「以前 / 为什么」会自动切到历史或变更面</span>
+</div>
+
+<div class="card" style="padding:6px 20px 12px;margin-top:10px">
+  
+        <div class="result">
+          <div class="result-head">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z'/><path d='M14 3v6h6'/><path d='M8 13h8M8 17h5'/></svg>
+            <span class="result-title">工作区知识库 M3 详细设计</span>
+            <span class="status-pill is-muted">需求</span>
+            <span class="status-pill is-muted">v7</span>
+            <span class="result-score">0.86</span>
+          </div>
+          <div class="result-snip">中文连续段按 <mark class="hit">2-gram</mark> 预分词；拉丁字母与数字小写化；标题 ×4、摘要 ×3、正文 ×1 重复写入，用 bm25 的 tf 近似实现「摘要优先」。</div>
+          <div class="result-foot">
+            <span class="hit-term">2-gram</span><span class="hit-term">分词</span>
+            <span class="uri-chip">@v7#b4</span>
+            <span>·</span><span>标题命中 ×4 · 正文命中 ×1</span>
+            <span class="push-right"></span>
+            <button class="text-link">打开原文 <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 4h6v6'/><path d='M20 4 11 13'/><path d='M19 14v4.5A2.5 2.5 0 0 1 16.5 21h-11A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H10'/></svg></button>
+          </div>
+        </div>
+        <div class="result">
+          <div class="result-head">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z'/><path d='M14 3v6h6'/><path d='M8 13h8M8 17h5'/></svg>
+            <span class="result-title">沙箱 ACL 排障记录</span>
+            <span class="status-pill is-muted">笔记</span>
+            <span class="status-pill is-muted">v4</span>
+            <span class="result-score">0.71</span>
+          </div>
+          <div class="result-snip">…真正的原因是 <mark class="hit">分词</mark> 把整段中文当成了一个 token，导致 FTS 匹配不到两字词…</div>
+          <div class="result-foot">
+            <span class="hit-term">分词</span>
+            <span class="uri-chip">@v4#b2</span>
+            <span>·</span><span>由 DesktopAgent 投影 · 90 天后清理</span>
+            <span class="push-right"></span>
+            <button class="text-link">打开原文 <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 4h6v6'/><path d='M20 4 11 13'/><path d='M19 14v4.5A2.5 2.5 0 0 1 16.5 21h-11A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H10'/></svg></button>
+          </div>
+        </div>
+        <div class="result">
+          <div class="result-head">
+            <svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z'/><path d='M14 3v6h6'/><path d='M8 13h8M8 17h5'/></svg>
+            <span class="result-title">2026-11-12 周会 · 部署方案评审</span>
+            <span class="status-pill is-muted">纪要</span>
+            <span class="status-pill is-muted">v2</span>
+            <span class="result-score">0.64</span>
+          </div>
+          <div class="result-snip">…决定先把 <mark class="hit">索引</mark> 与主库分开，避免重建索引时锁住会话列表…</div>
+          <div class="result-foot">
+            <span class="hit-term">索引</span>
+            <span class="uri-chip">@v2#b7</span>
+            <span>·</span><span>暂存内容 · 归档后才可被引用</span>
+            <span class="push-right"></span>
+            <button class="text-link">打开原文 <svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 4h6v6'/><path d='M20 4 11 13'/><path d='M19 14v4.5A2.5 2.5 0 0 1 16.5 21h-11A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H10'/></svg></button>
+          </div>
+        </div>
+</div>
+
+<div class="card" style="margin-top:14px">
+  <div class="btn-row">
+    <span class="status-pill is-warning"><svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='12' cy='12' r='9'/><path d='M12 11v5'/><circle cx='12' cy='7.8' r='.9'/></svg>3 条结果来自当前态 · 未命中率 12%</span>
+    <span class="push-right"></span>
+    <button class="btn btn-ghost btn-sm"><svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='m12 3 9 5-9 5-9-5z'/><path d='m3 13 9 5 9-5'/><path d='m3 17 9 5 9-5'/></svg>让 Agent 浏览目录兜底</button>
+  </div>
+</div>
+</div></main>
+  </div>
+</div>
+</body>
+</html>

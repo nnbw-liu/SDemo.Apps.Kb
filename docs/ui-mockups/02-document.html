@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>sdemo.kb · 工作区知识库 M3 详细设计</title>
+<link rel="stylesheet" href="sdemo-ui.css">
+<link rel="stylesheet" href="kb.css">
+</head>
+<body>
+<div class="app-shell">
+  
+    <aside class="sidebar">
+      <a class="brand" href="#">
+        <span class="brand-mark">K<span>.</span></span>
+        <span class="brand-copy"><strong>知识库</strong><small>sdemo.kb · 本地</small></span>
+      </a>
+
+      <div class="nav-group-label">库</div>
+      <div class="nav">
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 3H6.5A2.5 2.5 0 0 0 4 5.5v13A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5V9z'/><path d='M14 3v6h6'/><path d='M8 13h8M8 17h5'/></svg>全部文档</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M4 13h4l1.5 3h5L16 13h4'/><path d='M5 5h14l2 8v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4z'/></svg>待归档<span class="chip-count">12</span></a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='11' cy='11' r='7'/><path d='m20 20-4-4'/></svg>检索</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 16V4'/><path d='m7 9 5-5 5 5'/><path d='M4 20h16'/></svg>导入</a>
+      </div>
+
+      <div class="nav-group-label">分类</div>
+      <div class="nav">
+        <a class="nav-item active" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='5'/><circle cx='12' cy='12' r='1'/></svg>需求</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x='3' y='5' width='18' height='16' rx='2.5'/><path d='M8 3v4M16 3v4M3 10h18'/></svg>会议纪要</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='m5 12 4.5 4.5L19 7'/></svg>决策</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M3 7.5A2.5 2.5 0 0 1 5.5 5H9l2 2.5h7.5A2.5 2.5 0 0 1 21 10v7.5a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5z'/></svg>资料</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'/></svg>笔记</a>
+      </div>
+
+      <div class="nav-group-label">其它</div>
+      <div class="nav">
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M4 7h16'/><path d='M9 7V4h6v3'/><path d='M6 7l1 13h10l1-13'/><path d='M10 11v5M14 11v5'/></svg>回收站</a>
+        <a class="nav-item" href="#"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='12' cy='12' r='3'/><path d='M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z'/></svg>设置</a>
+      </div>
+
+      <div class="sidebar-spacer"></div>
+
+      <div class="sidebar-note">
+        <div class="sidebar-note-icon"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z'/></svg></div>
+        <div>
+          <strong>12 条暂存待归档</strong>
+          <p>30 天后自动清理；归档后全量保留。</p>
+        </div>
+      </div>
+
+      <div class="sidebar-foot">
+        <div class="avatar">L</div>
+        <div class="sidebar-foot-copy">
+          <strong>本地知识库</strong>
+          <small>v0.1.0 · 2.4 GB</small>
+        </div>
+        <button class="icon-btn" title="主题"><svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'/></svg></button>
+      </div>
+    </aside>
+    
+  <div class="main-column">
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="eyebrow">Knowledge Base</span>
+        <h1>工作区知识库 M3 详细设计</h1>
+        <p class="topbar-desc">需求 · v7 · 4 个块 · 由你与 DesktopAgent 共同修订</p>
+      </div>
+      <div class="topbar-actions"><div class="segmented"><button>阅读</button><button class="active">对比</button><button>引用</button></div><button class="btn btn-ghost"><svg class="icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M14 4h6v6'/><path d='M20 4 11 13'/><path d='M19 14v4.5A2.5 2.5 0 0 1 16.5 21h-11A2.5 2.5 0 0 1 3 18.5v-11A2.5 2.5 0 0 1 5.5 5H10'/></svg>在 Agent 中打开</button></div>
+    </header>
+    <main class="content kb-content"><div class="kb-split kb-split-wide"><div class="kb-col kb-col-main">
+<div class="doc-head">
+  <span class="eyebrow">需求 · 最新 v7 · 2026-11-13 18:24</span>
+  <h2 class="doc-title">工作区知识库 M3 详细设计</h2>
+  <div class="doc-meta">
+    <span class="ret ret-durable"><span class="ret-dot"></span>归档</span>
+    <span class="ret ret-pinned"><span class="ret-dot"></span>被 3 处引用</span>
+    <span class="uri-chip">sdemo.kb/doc/01H9…@v7#b4</span>
+    <span class="meta-sep"></span>
+    <span>来源：手工撰写</span><span>·</span><span>4 块 · 1.2 KB 文本</span>
+  </div>
+</div>
+
+<div class="doc-toolbar">
+  <button class="btn btn-primary btn-sm"><svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 20h9'/><path d='M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z'/></svg>编辑块</button>
+  <button class="btn btn-ghost btn-sm"><svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='12' cy='12' r='9'/><path d='M12 7v5l3.5 2'/></svg>与 v6 比较</button>
+  <button class="btn btn-ghost btn-sm"><svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M10 13a4.5 4.5 0 0 0 6.4 0l2.6-2.6a4.5 4.5 0 0 0-6.4-6.4L11 5.6'/><path d='M14 11a4.5 4.5 0 0 0-6.4 0L5 13.6a4.5 4.5 0 0 0 6.4 6.4L13 18.4'/></svg>引用影响面</button>
+  <span class="push-right"></span>
+  <span class="muted" style="font-size:10.5px">派生状态</span>
+  <span class="status-pill is-success">已就绪</span>
+</div>
+
+<div class="body-blocks">
+  <div class="blk"><h2>1. 目标与非目标</h2><span class="blk-anchor blk-anchor-always">#b1 · p.1</span></div>
+  <div class="blk">
+    <p>把当前工作区里已归档的会话变成可检索的知识，而不是每轮把历史塞进上下文。默认上下文成本为 0；开启后系统提示只多一句「本工作区有 N 条归档会话」。</p>
+    <span class="blk-anchor blk-anchor-always">#b2 · p.1</span>
+  </div>
+  <div class="blk">
+    <p>非目标：不做向量库、不做 embedding、不做跨工作区检索。检索与正文都走工具结果预算：单次检索 ≤800 token，正文按 <code>MidTurnToolResultChars</code> 分页。</p>
+    <span class="blk-anchor blk-anchor-always">#b3 · p.2</span>
+  </div>
+  <div class="blk blk-changed">
+    <h2>2.2 FTS5 索引</h2>
+    <p>索引与归档会话放在<strong>同一个工作区 SQLite 文件</strong>里，避免跨库一致性问题。中文连续段按 2-gram 预分词；拉丁字母与数字小写化；标题 ×4、摘要 ×3、正文 ×1 重复写入，用 bm25 的 tf 近似实现「摘要优先」。</p>
+    <span class="blk-anchor blk-anchor-always">#b4 · p.3</span>
+  </div>
+  <div class="blk">
+    <h2>3. 数据模型</h2>
+    <p>五个概念：文档 kb_doc、版本 kb_version、块 kb_block、变更 kb_change、引用 kb_link。版本只增不改，编辑 = 新版本 + 新块；块正文按 content_hash 存一份，版本只引用块 id。</p>
+    <span class="blk-anchor blk-anchor-always">#b5 · p.3</span>
+  </div>
+  <div class="blk">
+    <p>内容寻址让「改一段」的存储代价变成 O(改动量)：五十个版本不是五十倍存储。</p>
+    <span class="blk-anchor blk-anchor-always">#b6 · p.4</span>
+  </div>
+</div>
+
+<div class="doc-foot">
+  <div class="rail-label">相关</div>
+  <div class="foot-chips">
+    <span class="ref-chip"><svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x='3' y='5' width='18' height='16' rx='2.5'/><path d='M8 3v4M16 3v4M3 10h18'/></svg>2026-11-12 周会 · 部署方案评审 <small>@v2#b7</small></span>
+    <span class="ref-chip"><svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='m5 12 4.5 4.5L19 7'/></svg>放弃云端 ASR，v1 全本地 <small>@v3</small></span>
+    <span class="ref-chip"><svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='5'/><circle cx='12' cy='12' r='1'/></svg>需求：跨应用引用解析 <small>@v12#b2</small></span>
+  </div>
+</div>
+</div><div class="kb-col kb-col-rail">
+<div class="rail-block">
+  <div class="rail-label">版本链<span class="muted" style="font-size:9.5px">7 版 · 1 分支</span></div>
+  <div class="vtimeline">
+    <div class="vtl-item current"><span>v7<small> 当前</small></span><span class="vtl-meta">11-13 · 你</span></div>
+    <div class="vtl-item branch"><span>v6<small> 分叉</small></span><span class="vtl-meta">11-10 · Agent</span></div>
+    <div class="vtl-item"><span>v5</span><span class="vtl-meta">11-08</span></div>
+    <div class="vtl-item"><span>v3</span><span class="vtl-meta">11-02</span></div>
+    <div class="vtl-item"><span>v2</span><span class="vtl-meta">10-28 · 会议投影</span></div>
+    <div class="vtl-item"><span>v1</span><span class="vtl-meta">10-23 · 手工</span></div>
+  </div>
+</div>
+
+<div class="rail-block">
+  <div class="rail-label">谁引用了它</div>
+  <div class="reason-item">
+    <div class="reason-who"><svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x='3' y='5' width='18' height='16' rx='2.5'/><path d='M8 3v4M16 3v4M3 10h18'/></svg>事序 · 待办 3 条</div>
+    <div class="reason-text">基于 @v5#b3 的验收标准</div>
+  </div>
+  <div class="reason-item">
+    <div class="reason-who"><svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='m12 3 9 5-9 5-9-5z'/><path d='m3 13 9 5 9-5'/><path d='m3 17 9 5 9-5'/></svg>桌面组件 · 今日</div>
+    <div class="reason-text">显示 @v7#b1 标题</div>
+  </div>
+  <div class="reason-item">
+    <div class="reason-who" style="color:var(--amber)"><svg class="icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d='M12 4 21 20H3z'/><path d='M12 10v4'/><circle cx='12' cy='17.4' r='.9'/></svg>1 处来源已变更</div>
+    <div class="reason-text">待办 PL-07 引用的 #b2 在 v7 已改写，建议复核</div>
+  </div>
+</div>
+
+<div class="rail-block">
+  <div class="rail-label">变更理由</div>
+  <div class="reason-item">
+    <div class="reason-who">你 <small>11-13 18:24 · v7</small></div>
+    <div class="reason-text">把「按行切块」改成「按标题+段落」：行级 diff 在散文里全是噪音。</div>
+  </div>
+  <div class="reason-item">
+    <div class="reason-who">DesktopAgent <small>11-10 · v6 · 分叉</small></div>
+    <div class="reason-text">补充 2-gram 分词方案，与 workspace-memory 保持一致。</div>
+  </div>
+  <div class="reason-item">
+    <div class="reason-who">会议投影 <small>10-28 · v2</small></div>
+    <div class="reason-text">周会决议：v1 只做 FTS5，向量后置。</div>
+  </div>
+</div>
+
+<div class="rail-block">
+  <div class="rail-label">保留</div>
+  <div class="rail-note">归档文档 · 版本全留 · 原件永久<br>最近一次清理检查：无候选</div>
+</div>
+</div></div></main>
+  </div>
+</div>
+</body>
+</html>
