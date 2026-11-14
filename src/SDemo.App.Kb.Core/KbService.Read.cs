@@ -46,6 +46,7 @@ public sealed partial class KbService
                 Mime = blob.Mime,
                 Size = blob.Size,
                 Name = blob.Name,
+                StoredPath = blob.StoredPath,
             });
         }
 

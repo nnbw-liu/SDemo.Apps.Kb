@@ -35,7 +35,7 @@
 | MCP | 11 个 `kb_*` 工具 + 风险/审批元数据；`kb_update` / `kb_delete` 高风险 |
 | 写入方 outbox | `KbOutbox` + `KbIngestClient`；KB 离线时写入落本地队列，不抛回业务事务 |
 | 导入 | md / txt / docx / pptx / xlsx / 文字层 pdf；导入即建 `v1`；再次导入按块 diff 建新版本 |
-| **原件与派生** | 导入原件按 sha256 存 `blobs\` 并写 `kb_blob_ref`；扫描件 PDF 建 `derived_state=pending`，不进检索，Agent 回写块后自动转 ready |
+| **原件与派生** | 导入原件按 sha256 存 `blobs\` 并写 `kb_blob_ref`；扫描件 PDF 建 `derived_state=pending`，不进检索；`kb_get` 的 artifacts 带 `storedPath`，Agent OCR 后回写块自动转 ready |
 | **anchor** | docx `para` / pptx `slide` / xlsx `sheet!range` / pdf `page` / md `offset`；查看器块右侧显示位置 |
 | **保留与 GC** | staging TTL（会议 30 / Agent 90，可被 `ttlDays` 覆盖）→ 软删 → 回收站 7 天 → 块/原件 GC；被引用文档整篇保护 |
 | **待归档与统计** | `/v1/inbox`（到期倒计时、正文/原件体积）、`/v1/promote-batch`、`/v1/stats`、`/v1/settings/retention`；Host 每小时维护，`--maintain` 手动跑 |

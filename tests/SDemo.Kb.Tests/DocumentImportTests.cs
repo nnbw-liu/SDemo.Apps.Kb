@@ -181,6 +181,7 @@ public sealed class DocumentImportTests
 
         var stored = Path.Combine(kb.DataDirectory, "blobs", artifact.Sha256[..2], artifact.Sha256);
         Assert.True(File.Exists(stored));
+        Assert.Equal(stored, artifact.StoredPath);
     }
 
     [Fact]

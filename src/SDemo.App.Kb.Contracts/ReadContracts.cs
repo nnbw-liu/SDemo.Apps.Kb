@@ -159,6 +159,9 @@ public sealed class ArtifactView
     public long Size { get; set; }
 
     public string? Name { get; set; }
+
+    /// <summary>本机 blob 路径；Agent OCR 直接读它，不必再走一次上传下载。</summary>
+    public string? StoredPath { get; set; }
 }
 
 public sealed class KbGetRequest
