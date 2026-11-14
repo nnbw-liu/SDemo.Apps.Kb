@@ -12,7 +12,7 @@ using Microsoft.Data.Sqlite;
 /// </summary>
 public static class KbSchema
 {
-    public const int Version = 2;
+    public const int Version = 3;
 
     public const string Sql = """
         CREATE TABLE IF NOT EXISTS kb_doc (
@@ -48,6 +48,14 @@ public static class KbSchema
             UNIQUE(doc_id, seq)
         );
         CREATE INDEX IF NOT EXISTS ix_kb_version_doc ON kb_version(doc_id, seq DESC);
+
+        CREATE TABLE IF NOT EXISTS kb_version_parent (
+            version_id TEXT NOT NULL REFERENCES kb_version(id) ON DELETE CASCADE,
+            parent_id  TEXT NOT NULL REFERENCES kb_version(id),
+            ordinal    INTEGER NOT NULL,
+            PRIMARY KEY (version_id, parent_id)
+        );
+        CREATE INDEX IF NOT EXISTS ix_kb_version_parent_parent ON kb_version_parent(parent_id);
 
         CREATE TABLE IF NOT EXISTS kb_block (
             id            TEXT PRIMARY KEY,
@@ -176,6 +184,19 @@ public static class KbSchema
         {
             AddColumnIfMissing(connection, transaction, "kb_doc", "expires_at", "TEXT NULL");
             AddColumnIfMissing(connection, transaction, "kb_doc", "purged_at", "TEXT NULL");
+        }
+
+        if (version < 3)
+        {
+            AddColumnIfMissing(connection, transaction, "kb_version", "named_version", "TEXT NULL");
+
+            using var backfill = connection.CreateCommand();
+            backfill.Transaction = transaction;
+            backfill.CommandText = """
+                INSERT OR IGNORE INTO kb_version_parent (version_id, parent_id, ordinal)
+                SELECT id, parent_id, 0 FROM kb_version WHERE parent_id IS NOT NULL;
+                """;
+            backfill.ExecuteNonQuery();
         }
 
         using var command = connection.CreateCommand();

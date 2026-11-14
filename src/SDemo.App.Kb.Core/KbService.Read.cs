@@ -30,7 +30,7 @@ public sealed partial class KbService
         var content = new DocContent
         {
             Doc = MapDoc(session, doc),
-            Version = MapVersion(version),
+            Version = MapVersion(session, version),
         };
 
         for (var ordinal = 0; ordinal < blocks.Count; ordinal++)
@@ -468,7 +468,7 @@ public sealed partial class KbService
     {
         using var session = _store.Read();
         _ = session.GetDoc(docId) ?? throw KbException.NotFound($"文档不存在：{docId}");
-        return session.ListVersions(docId, limit).Select(MapVersion).ToList();
+        return session.ListVersions(docId, limit).Select(version => MapVersion(session, version)).ToList();
     }
 
     private static VersionRow? ResolveVersion(KbSession session, DocRow doc, string? version)
@@ -503,6 +503,7 @@ public sealed partial class KbService
             Uri = doc.Uri,
             CurrentVersionId = doc.CurrentVersionId,
             CurrentVersionSeq = current?.Seq ?? 0,
+            CurrentNamedVersion = current?.NamedVersion,
             DerivedState = ParseEnum(doc.DerivedState, DerivedState.Ready),
             CreatedAt = doc.CreatedAt,
             UpdatedAt = doc.UpdatedAt,
@@ -512,7 +513,7 @@ public sealed partial class KbService
         };
     }
 
-    private static VersionSummary MapVersion(VersionRow version) => new()
+    private static VersionSummary MapVersion(KbSession session, VersionRow version) => new()
     {
         VersionId = version.Id,
         DocId = version.DocId,
@@ -522,6 +523,7 @@ public sealed partial class KbService
         Author = ParseEnum(version.Author, VersionAuthor.System),
         Reason = version.Reason,
         NamedVersion = version.NamedVersion,
+        ParentVersionIds = session.GetParentIds(version.Id).ToList(),
         CreatedAt = version.CreatedAt,
     };
 
@@ -565,3 +567,4 @@ public sealed partial class KbService
 
     private sealed record HitWithText(KbSearchHit Hit, string? HitText);
 }
+

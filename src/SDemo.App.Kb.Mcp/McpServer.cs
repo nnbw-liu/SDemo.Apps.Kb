@@ -179,6 +179,7 @@ public sealed class McpServer
                 "kb_create" => _service.Create(Deserialize<KbCreateRequest>(arguments), Actor),
                 "kb_update" => _service.Update(Deserialize<KbUpdateRequest>(arguments), Actor),
                 "kb_promote" => _service.Promote(Deserialize<KbPromoteRequest>(arguments), Actor),
+                "kb_merge" => _service.Merge(Deserialize<KbMergeRequest>(arguments), Actor),
                 "kb_delete" => _service.Delete(Deserialize<KbDeleteRequest>(arguments), Actor),
                 _ => throw KbException.Invalid($"未知工具：{name}"),
             };

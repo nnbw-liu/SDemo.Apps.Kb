@@ -460,20 +460,50 @@ public sealed class KbSession : IDisposable
 
     // ---------------------------------------------------------------- 版本
 
-    public void InsertVersion(VersionRow row) => Execute(
-        """
-        INSERT INTO kb_version (id, doc_id, seq, parent_id, content_hash, author, reason, named_version, created_at)
-        VALUES ($id, $doc, $seq, $parent, $hash, $author, $reason, $named, $created)
-        """,
-        ("$id", row.Id),
-        ("$doc", row.DocId),
-        ("$seq", row.Seq),
-        ("$parent", row.ParentId),
-        ("$hash", row.ContentHash),
-        ("$author", row.Author),
-        ("$reason", row.Reason),
-        ("$named", row.NamedVersion),
-        ("$created", Format(row.CreatedAt)));
+    public void InsertVersion(VersionRow row)
+    {
+        Execute(
+            """
+            INSERT INTO kb_version (id, doc_id, seq, parent_id, content_hash, author, reason, named_version, created_at)
+            VALUES ($id, $doc, $seq, $parent, $hash, $author, $reason, $named, $created)
+            """,
+            ("$id", row.Id),
+            ("$doc", row.DocId),
+            ("$seq", row.Seq),
+            ("$parent", row.ParentId),
+            ("$hash", row.ContentHash),
+            ("$author", row.Author),
+            ("$reason", row.Reason),
+            ("$named", row.NamedVersion),
+            ("$created", Format(row.CreatedAt)));
+
+        if (!string.IsNullOrWhiteSpace(row.ParentId))
+        {
+            InsertVersionParent(row.Id, row.ParentId, 0);
+        }
+    }
+
+    public void InsertVersionParent(string versionId, string parentId, int ordinal) => Execute(
+        "INSERT OR IGNORE INTO kb_version_parent (version_id, parent_id, ordinal) VALUES ($version, $parent, $ordinal)",
+        ("$version", versionId),
+        ("$parent", parentId),
+        ("$ordinal", ordinal));
+
+    public IReadOnlyList<string> GetParentIds(string versionId)
+    {
+        using var command = Command(
+            "SELECT parent_id FROM kb_version_parent WHERE version_id = $version ORDER BY ordinal ASC",
+            ("$version", versionId));
+
+        using var reader = command.ExecuteReader();
+        var parents = new List<string>();
+        while (reader.Read())
+        {
+            parents.Add(reader.GetString(0));
+        }
+
+        return parents;
+    }
 
     public VersionRow? GetVersionById(string versionId)
     {
@@ -584,6 +614,7 @@ public sealed class KbSession : IDisposable
         var victims = versions.Skip(keep).ToList();
         foreach (var victim in victims)
         {
+            Execute("DELETE FROM kb_version_parent WHERE version_id = $id OR parent_id = $id", ("$id", victim.Id));
             Execute("DELETE FROM kb_blob_ref WHERE version_id = $id", ("$id", victim.Id));
             Execute("DELETE FROM kb_block_edge WHERE version_id = $id", ("$id", victim.Id));
             Execute("DELETE FROM kb_version WHERE id = $id", ("$id", victim.Id));

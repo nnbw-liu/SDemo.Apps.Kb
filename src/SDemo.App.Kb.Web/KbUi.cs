@@ -14,6 +14,9 @@ public static class KbUi
         _ => "笔记",
     };
 
+    public static string VersionLabel(VersionSummary version) =>
+        version.NamedVersion ?? "v" + version.Seq;
+
     public static string RetentionLabel(RetentionLevel retention) =>
         retention == RetentionLevel.Durable ? "归档" : "暂存";
 
@@ -157,5 +160,6 @@ public static class KbUi
         }
     }
 }
+
 
 

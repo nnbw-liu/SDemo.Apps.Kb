@@ -171,6 +171,7 @@ public static class McpToolCatalog
             "expectedVersion": { "type": "integer", "minimum": 1, "description": "乐观并发：先 kb_get 拿当前 seq" },
             "rationale": { "type": "string", "description": "为什么改——这是追溯里最值钱的字段" },
             "reason": { "type": "string" },
+            "namedVersion": { "type": "string", "description": "requirement 语义版本，如 v1.1 / v2.0；缺省自动 minor" },
             "ops": {
               "type": "array",
               "minItems": 1,
@@ -202,6 +203,37 @@ public static class McpToolCatalog
             "retention": { "type": "string", "enum": ["staging", "durable"] },
             "rationale": { "type": "string" },
             "confirmed": { "type": "boolean", "description": "durable → staging 必须 true" }
+          }
+        }
+        """;
+
+    private const string MergeSchema = """
+        {
+          "type": "object",
+          "required": ["docId", "leftVersion", "rightVersion", "blocks"],
+          "additionalProperties": false,
+          "properties": {
+            "docId": { "type": "string" },
+            "leftVersion": { "type": "integer", "minimum": 1 },
+            "rightVersion": { "type": "integer", "minimum": 1 },
+            "expectedVersion": { "type": "integer", "minimum": 1 },
+            "rationale": { "type": "string", "description": "冲突裁决理由" },
+            "namedVersion": { "type": "string", "description": "requirement 合并版本，如 v2.0" },
+            "blocks": {
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 500,
+              "items": {
+                "type": "object",
+                "required": ["text"],
+                "additionalProperties": false,
+                "properties": {
+                  "text": { "type": "string" },
+                  "isHeading": { "type": "boolean" },
+                  "headingLevel": { "type": "integer", "minimum": 0, "maximum": 6 }
+                }
+              }
+            }
           }
         }
         """;
@@ -240,6 +272,8 @@ public static class McpToolCatalog
             RiskLevel.High, ApprovalMode.Always, false, true, false, true),
         new("kb_promote", "升格 / 降格保留等级；降格需二次确认。", PromoteSchema,
             RiskLevel.Medium, ApprovalMode.Once, false, false, true, true),
+        new("kb_merge", "把两个分叉版本合并成多父版本；调用方给出已裁决的块序列。", MergeSchema,
+            RiskLevel.Medium, ApprovalMode.Once, false, false, false, true),
         new("kb_delete", "软删文档；高风险，必须用户确认。", DeleteSchema,
             RiskLevel.High, ApprovalMode.Always, false, true, false, true),
     ];

@@ -163,6 +163,7 @@ public sealed partial class KbService
             request.Rationale,
             rationaleSource,
             author,
+            request.NamedVersion,
             now);
 
         session.Commit();
@@ -204,6 +205,7 @@ public sealed partial class KbService
             Reason = request.Reason ?? "AI 修订",
             Rationale = request.Rationale,
             RationaleSource = request.RationaleSource,
+            NamedVersion = request.NamedVersion,
             Blocks = request.Ops,
         };
 
@@ -442,7 +444,7 @@ public sealed partial class KbService
             hash,
             author,
             request.Rationale,
-            null,
+            request.Kind == KbKind.Requirement ? KbSemanticVersion.Initial.ToString() : null,
             now);
 
         session.InsertVersion(version);
@@ -478,6 +480,7 @@ public sealed partial class KbService
             DocId = docId,
             VersionId = versionId,
             Seq = 1,
+            NamedVersion = version.NamedVersion,
             Created = true,
             CurrentVersionSeq = 1,
             BlockIds = blocks.Select(block => block.Id).ToList(),
@@ -558,6 +561,7 @@ public sealed partial class KbService
                 DocId = doc.Id,
                 VersionId = current.Id,
                 Seq = current.Seq,
+                NamedVersion = current.NamedVersion,
                 Created = false,
                 Deduplicated = true,
                 NoChange = true,
@@ -567,7 +571,16 @@ public sealed partial class KbService
             };
         }
 
-        var version = NewVersion(session, doc, current, blocks, hash, author, request.Rationale, now);
+        var version = NewVersion(
+            session,
+            doc,
+            current,
+            blocks,
+            hash,
+            author,
+            request.Rationale,
+            now,
+            ResolveNamedVersion(doc.Kind, current, null));
         var diffs = KbDiff.BlockDiffs(currentBlocks, blocks);
         WriteChanges(session, doc, version.Id, diffs, request.Rationale, rationaleSource, now);
 
@@ -582,6 +595,7 @@ public sealed partial class KbService
             DocId = doc.Id,
             VersionId = version.Id,
             Seq = version.Seq,
+            NamedVersion = version.NamedVersion,
             Created = false,
             CurrentVersionSeq = version.Seq,
             BlockIds = blocks.Select(block => block.Id).ToList(),
@@ -599,6 +613,7 @@ public sealed partial class KbService
         string? rationale,
         RationaleSource rationaleSource,
         string author,
+        string? namedVersion,
         DateTimeOffset now)
     {
         var before = session.GetVersionBlocks(current.Id).ToList();
@@ -670,6 +685,7 @@ public sealed partial class KbService
                 DocId = doc.Id,
                 VersionId = current.Id,
                 Seq = current.Seq,
+                NamedVersion = current.NamedVersion,
                 Created = false,
                 NoChange = true,
                 CurrentVersionSeq = current.Seq,
@@ -678,7 +694,16 @@ public sealed partial class KbService
             };
         }
 
-        var version = NewVersion(session, doc, current, after, hash, author, reason ?? rationale, now);
+        var version = NewVersion(
+            session,
+            doc,
+            current,
+            after,
+            hash,
+            author,
+            reason ?? rationale,
+            now,
+            ResolveNamedVersion(doc.Kind, current, namedVersion));
 
         foreach (var (op, old, fresh) in pending)
         {
@@ -717,6 +742,7 @@ public sealed partial class KbService
             DocId = doc.Id,
             VersionId = version.Id,
             Seq = version.Seq,
+            NamedVersion = version.NamedVersion,
             Created = false,
             CurrentVersionSeq = version.Seq,
             BlockIds = after.Select(block => block.Id).ToList(),
@@ -732,7 +758,9 @@ public sealed partial class KbService
         string hash,
         string author,
         string? reason,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        string? namedVersion = null,
+        IReadOnlyList<string>? extraParents = null)
     {
         var seq = current.Seq + 1;
         var version = new VersionRow(
@@ -743,10 +771,22 @@ public sealed partial class KbService
             hash,
             author,
             reason,
-            null,
+            namedVersion,
             now);
 
         session.InsertVersion(version);
+
+        if (extraParents is not null)
+        {
+            var ordinal = 1;
+            foreach (var parentId in extraParents
+                         .Where(id => !string.IsNullOrWhiteSpace(id)
+                                      && !string.Equals(id, current.Id, StringComparison.Ordinal))
+                         .Distinct(StringComparer.Ordinal))
+            {
+                session.InsertVersionParent(version.Id, parentId, ordinal++);
+            }
+        }
 
         for (var ordinal = 0; ordinal < blocks.Count; ordinal++)
         {
@@ -756,8 +796,7 @@ public sealed partial class KbService
         return version;
     }
 
-    private void WriteChanges(
-        KbSession session,
+    private void WriteChanges(        KbSession session,
         DocRow doc,
         string versionId,
         IReadOnlyList<BlockDiff> diffs,
@@ -1029,6 +1068,47 @@ public sealed partial class KbService
 
     internal static string ToWire(RationaleSource source) => source.ToString().ToLowerInvariant();
 
+    /// <summary>
+    /// requirement 强制语义版本：缺省 minor+1；显式 vN.M 必须严格大于当前版本。
+    /// 非 requirement 不允许命名版本。
+    /// </summary>
+    internal static string? ResolveNamedVersion(string kind, VersionRow current, string? requested)
+    {
+        var isRequirement = string.Equals(kind, ToWire(KbKind.Requirement), StringComparison.Ordinal);
+        if (!isRequirement)
+        {
+            if (!string.IsNullOrWhiteSpace(requested))
+            {
+                throw KbException.Invalid("只有 requirement 文档使用语义版本。");
+            }
+
+            return null;
+        }
+
+        var currentVersion = KbSemanticVersion.TryParse(current.NamedVersion, out var parsed)
+            ? parsed!
+            : current.Seq <= 1
+                ? KbSemanticVersion.Initial
+                : new KbSemanticVersion(1, current.Seq - 1);
+
+        if (string.IsNullOrWhiteSpace(requested))
+        {
+            return currentVersion.Next().ToString();
+        }
+
+        if (!KbSemanticVersion.TryParse(requested, out var next) || next is null)
+        {
+            throw KbException.Invalid($"语义版本不合法：{requested}（示例 v1.1 / v2.0）。");
+        }
+
+        if (next.CompareTo(currentVersion) <= 0)
+        {
+            throw KbException.Invalid($"语义版本必须大于当前 {currentVersion}。");
+        }
+
+        return next.ToString();
+    }
+
     internal static string ToWire(DerivedState state) => state.ToString().ToLowerInvariant();
 
     internal static string ToWire(VersionAuthor author) => author.ToString().ToLowerInvariant();
@@ -1039,6 +1119,8 @@ public sealed partial class KbService
         where TEnum : struct, Enum =>
         Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed) ? parsed : fallback;
 }
+
+
 
 
 

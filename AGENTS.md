@@ -20,11 +20,12 @@
 
 ## 现状（2026-11-14）
 
-✅ **P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + P4-d 格式/原件/派生首版已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 72 个测试。
+✅ **P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 76 个测试。
 
 | 已做 | 说明 |
 | --- | --- |
-| 版本链 | `kb_doc` / `kb_version`（DAG，`parent_id` 可分叉）/ `kb_block` / `kb_block_edge`；版本只增不改 |
+| 版本链 | `kb_doc` / `kb_version`（DAG，`parent_id` 可分叉 + `kb_version_parent` 多父）/ `kb_block` / `kb_block_edge`；版本只增不改 |
+| **语义版本** | requirement 从 v1.0 开始，缺省 minor 递增；写面/MCP 可显式 v2.0，但必须严格大于当前；普通文档不能命名 |
 | 块级内容寻址 | 空白/换行归一化后 hash；同文档同 hash 复用块；`content_hash` 相同直接跳过，不建版本 |
 | 三索引面 + 路由 | 当前态 / 历史态 / 变更事实（+ 暂存需 `scope=recent`）；关键词路由「现在 / 以前 / 为什么 / 最近」 |
 | 中文检索 | FTS5 + 2-gram 预分词；`hitTerms` / `noHit` 随结果返回 |
@@ -32,7 +33,7 @@
 | 引用 | `docId@v<seq>#<blockId>`；`/v1/resolve` 只回元数据；`kb_refs` 反查影响面；外部实体可登记引用 |
 | 写面 | `/v1/ingest` `/v1/revise` `/v1/promote` `/v1/retract`；per-app Bearer token；幂等 |
 | 引用登记 | `/v1/refs` / `/v1/refs/retract`：Planner/Meeting 把实体 URI 对 KB 的引用写进 `kb_link`（`doc_id=''`），影响面/GC/清理保护才算数 |
-| MCP | 11 个 `kb_*` 工具 + 风险/审批元数据；`kb_update` / `kb_delete` 高风险 |
+| MCP | 12 个 `kb_*` 工具 + 风险/审批元数据；`kb_update` / `kb_delete` 高风险；`kb_merge` 中风险 |
 | 写入方 outbox | `KbOutbox` + `KbIngestClient`；KB 离线时写入落本地队列，不抛回业务事务 |
 | 导入 | md / txt / docx / pptx / xlsx / 文字层 pdf；导入即建 `v1`；再次导入按块 diff 建新版本 |
 | **原件与派生** | 导入原件按 sha256 存 `blobs\` 并写 `kb_blob_ref`；扫描件 PDF 建 `derived_state=pending`，不进检索；`kb_get` 的 artifacts 带 `storedPath`，Agent OCR 后回写块自动转 ready |
@@ -43,7 +44,7 @@
 | **token 分发** | Host/Viewer 首次启动给白名单 App 各签一个 token，落到 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\<appId>.token`（ACL 仅当前用户）；`--tokens` 可列明文；`--issue-token` 轮换并覆盖 |
 | **Planner 引用登记** | Planner 的 `KbRefSyncLoop` 监听 link 变化立即同步，30s 兜底轮询；通过 `/v1/refs` 登记/撤销；KB 未启动时自动跳过 |
 
-**未做（按分期）**：图片 OCR / caption 与 Agent 派生回写的完整入口（当前回写走 `kb_update` 自动转 ready）；命名修订与多父合并（P4-c）；Meeting 侧的 `/v1/refs` 自动登记（Meeting 尚无 `src/`）；向量检索（P4+）。
+**未做（按分期）**：图片 OCR / caption 与 Agent 派生回写的完整入口（当前回写走 `kb_update` 自动转 ready）；Meeting 侧的 `/v1/refs` 自动登记（Meeting 尚无 `src/`）；向量检索（P4+）。
 
 ## 工程结构
 
@@ -123,13 +124,14 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 | `kb_annotate` | 低 | 否 |
 | `kb_create` | 中 | 否 |
 | `kb_promote` | 中 | 一次 |
+| `kb_merge` | 中 | 一次 |
 | `kb_update` / `kb_delete` | **高** | **总是** |
 
 写面给 App 投影；MCP 写只给 Agent 的块级修正。**禁止整篇正文提交。**
 
 ### 数据与 URI
 
-- 表：`kb_doc` `kb_version` `kb_block` `kb_block_edge` `kb_change` `kb_link` `kb_blob` `kb_blob_ref` `kb_fts` `kb_change_fts` `kb_token` `kb_audit` `kb_meta`。
+- 表：`kb_doc` `kb_version` `kb_version_parent` `kb_block` `kb_block_edge` `kb_change` `kb_link` `kb_blob` `kb_blob_ref` `kb_fts` `kb_change_fts` `kb_token` `kb_audit` `kb_meta`。
 - 引用：`sdemo.kb/doc/<docId>@v<seq>#<blockId>`；必须带版本。
 - 数据目录：`%APPDATA%\SDemo\Apps\sdemo.kb\`（`kb.db` + `blobs\` + `cache\`）。
 

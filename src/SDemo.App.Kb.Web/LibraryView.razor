@@ -61,7 +61,7 @@
                                 <span class="ret ret-pinned"><span class="ret-dot"></span>被 @doc.InboundRefCount 处引用</span>
                             }
                             <span>@KbUi.KindLabel(doc.Kind)</span><span>·</span>
-                            <span>v@(doc.CurrentVersionSeq)</span><span>·</span>
+                            <span>@(doc.CurrentNamedVersion ?? "v" + doc.CurrentVersionSeq)</span><span>·</span>
                             <span>@KbUi.RelativeTime(doc.UpdatedAt)</span>
                         </div>
                     </button>

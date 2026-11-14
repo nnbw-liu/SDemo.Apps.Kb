@@ -203,6 +203,15 @@ public sealed class KbServer : IDisposable
                     return;
                 }
 
+                case "/v1/merge" when IsPost(request):
+                {
+                    var body = await ReadBodyAsync(request).ConfigureAwait(false);
+                    var payload = KbJson.Deserialize<KbMergeRequest>(body)
+                        ?? throw KbException.Invalid("请求体为空。");
+                    await WriteJsonAsync(response, 200, _service.Merge(payload, appId)).ConfigureAwait(false);
+                    return;
+                }
+
                 case "/v1/promote" when IsPost(request):
                 {
                     var body = await ReadBodyAsync(request).ConfigureAwait(false);

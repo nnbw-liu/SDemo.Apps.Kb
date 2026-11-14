@@ -57,7 +57,7 @@ public sealed class SchemaMigrationTests
 
             using var version = check.CreateCommand();
             version.CommandText = "PRAGMA user_version;";
-            Assert.Equal(2, Convert.ToInt32(version.ExecuteScalar()));
+            Assert.Equal(3, Convert.ToInt32(version.ExecuteScalar()));
         }
         finally
         {
@@ -73,3 +73,4 @@ public sealed class SchemaMigrationTests
         }
     }
 }
+

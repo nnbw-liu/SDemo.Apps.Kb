@@ -5,7 +5,7 @@
         <div>
             <h2>@(_title is null ? "版本对比" : _title)</h2>
             <p class="muted">
-                v@(_result?.FromSeq) → v@(_result?.ToSeq)
+                @Label(_result?.FromSeq) → @Label(_result?.ToSeq)
                 · 块级结构 + 词级高亮
             </p>
         </div>
@@ -24,14 +24,14 @@
         <label>从 <select @bind="_fromSeq">
             @foreach (var version in _versions)
             {
-                <option value="@version.Seq">v@(version.Seq) · @KbUi.AuthorLabel(version.Author)</option>
+                <option value="@version.Seq">@KbUi.VersionLabel(version) · @KbUi.AuthorLabel(version.Author)</option>
             }
         </select></label>
         <span class="muted">→</span>
         <label>到 <select @bind="_toSeq">
             @foreach (var version in _versions)
             {
-                <option value="@version.Seq">v@(version.Seq) · @KbUi.AuthorLabel(version.Author)</option>
+                <option value="@version.Seq">@KbUi.VersionLabel(version) · @KbUi.AuthorLabel(version.Author)</option>
             }
         </select></label>
         <button class="btn btn-primary btn-sm" disabled="@(_loading || _versions.Count < 2)" @onclick="LoadAsync">
@@ -61,7 +61,7 @@
 
         <div class="diff-grid">
             <div class="diff-pane">
-                <div class="diff-pane-head">v@(_result.FromSeq) · 旧</div>
+                <div class="diff-pane-head">@Label(_result.FromSeq) · 旧</div>
                 @foreach (var block in _result.Blocks)
                 {
                     if (block.Op == ChangeOp.Add)
@@ -88,7 +88,7 @@
             </div>
 
             <div class="diff-pane">
-                <div class="diff-pane-head">v@(_result.ToSeq) · 新</div>
+                <div class="diff-pane-head">@Label(_result.ToSeq) · 新</div>
                 @foreach (var block in _result.Blocks)
                 {
                     if (block.Op == ChangeOp.Remove)
@@ -223,6 +223,11 @@
         }
     }
 
+    private string Label(int? seq) =>
+        _versions.FirstOrDefault(version => version.Seq == seq) is { } version
+            ? KbUi.VersionLabel(version)
+            : "v" + seq;
+
     private static IEnumerable<WordDiffSegment> Segments(BlockDiff block, string side) =>
         block.WordDiffs.Where(segment => side == "left"
             ? segment.Op is "equal" or "delete"
@@ -235,6 +240,7 @@
         _ => string.Empty,
     };
 }
+
 
 
 

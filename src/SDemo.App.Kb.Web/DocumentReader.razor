@@ -18,7 +18,7 @@ else
         <div class="doc-main-col">
             <div class="doc-head">
                 <span class="eyebrow">
-                    @KbUi.KindLabel(_content.Doc.Kind) · v@(_content.Version.Seq)
+                    @KbUi.KindLabel(_content.Doc.Kind) · @KbUi.VersionLabel(_content.Version)
                     @if (_viewSeq is not null && _viewSeq != _content.Doc.CurrentVersionSeq)
                     {
                         <text>· 历史版本</text>
@@ -98,6 +98,12 @@ else
                         {
                             <textarea class="kb-editor" @bind="_editText" rows="8"></textarea>
                             <input class="kb-input" placeholder="为什么改（可空）" @bind="_editRationale" />
+                            @if (_content.Doc.Kind == KbKind.Requirement)
+                            {
+                                <input class="kb-input"
+                                       placeholder="语义版本（可空，自动 v1.x；示例 v2.0）"
+                                       @bind="_editNamedVersion" />
+                            }
                             <div class="kb-edit-actions">
                                 <button class="btn btn-primary btn-sm" disabled="@_saving" @onclick="SaveEdit">
                                     @(_saving ? "保存中…" : "保存为新版本")
@@ -165,8 +171,12 @@ else
                     {
                         <button class="vnode @(version.Seq == _content.Version.Seq ? "current" : null)"
                                 @onclick="() => OpenVersion(version.Seq)">
-                            <strong>v@(version.Seq)</strong>
+                            <strong>@KbUi.VersionLabel(version)</strong>
                             <small>@KbUi.AuthorLabel(version.Author) · @KbUi.RelativeTime(version.CreatedAt)</small>
+                            @if (version.ParentVersionIds.Count > 1)
+                            {
+                                <small class="vnode-current">合并自 @version.ParentVersionIds.Count 个父版本</small>
+                            }
                             @if (version.Seq == _content.Doc.CurrentVersionSeq)
                             {
                                 <small class="vnode-current">当前</small>
@@ -235,6 +245,7 @@ else
     private string? _editingBlockId;
     private string _editText = string.Empty;
     private string _editRationale = string.Empty;
+    private string _editNamedVersion = string.Empty;
     private bool _saving;
     private string? _saveError;
     private bool _railOpen = false;
@@ -313,6 +324,7 @@ else
         _editingBlockId = block.BlockId;
         _editText = block.Text;
         _editRationale = string.Empty;
+        _editNamedVersion = string.Empty;
         _saveError = null;
     }
 
@@ -348,6 +360,7 @@ else
                     Rationale = rationale,
                     Reason = rationale,
                     RationaleSource = RationaleSource.User,
+                    NamedVersion = string.IsNullOrWhiteSpace(_editNamedVersion) ? null : _editNamedVersion.Trim(),
                     Ops =
                     [
                         new BlockInput
@@ -415,6 +428,7 @@ else
         }
     }
 }
+
 
 
 

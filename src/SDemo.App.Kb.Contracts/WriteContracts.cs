@@ -87,6 +87,9 @@ public sealed class ReviseRequest
 
     public string? IdempotencyKey { get; set; }
 
+    /// <summary>requirement 的语义版本名（如 v1.1 / v2.0）；缺省自动 minor。</summary>
+    public string? NamedVersion { get; set; }
+
     public List<BlockInput> Blocks { get; set; } = [];
 
     public List<IngestLink> Links { get; set; } = [];
@@ -153,6 +156,9 @@ public sealed class WriteResult
 
     public int Seq { get; set; }
 
+    /// <summary>requirement 的语义版本名；其它 kind 为 null。</summary>
+    public string? NamedVersion { get; set; }
+
     /// <summary>true = 本次真的新建了文档。</summary>
     public bool Created { get; set; }
 
@@ -197,6 +203,31 @@ public sealed class KbUpdateRequest
     public string? Rationale { get; set; }
 
     public string? Reason { get; set; }
+
+    public string? NamedVersion { get; set; }
+
+    public RationaleSource RationaleSource { get; set; } = RationaleSource.Ai;
+}
+
+/// <summary>
+/// 合并两个版本：调用方给出已裁决好的块序列，KB 只负责落成多父版本。
+/// 不做自动三路合并（裁决需要人/Agent，KB 不调模型）。
+/// </summary>
+public sealed class KbMergeRequest
+{
+    public string DocId { get; set; } = string.Empty;
+
+    public int LeftVersion { get; set; }
+
+    public int RightVersion { get; set; }
+
+    public int ExpectedVersion { get; set; }
+
+    public List<BlockInput> Blocks { get; set; } = [];
+
+    public string? Rationale { get; set; }
+
+    public string? NamedVersion { get; set; }
 
     public RationaleSource RationaleSource { get; set; } = RationaleSource.Ai;
 }

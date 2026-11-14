@@ -47,6 +47,9 @@ public sealed class DocSummary
 
     public int CurrentVersionSeq { get; set; }
 
+    /// <summary>当前版本的命名版本（requirement 才有）。</summary>
+    public string? CurrentNamedVersion { get; set; }
+
     public DerivedState DerivedState { get; set; } = DerivedState.Ready;
 
     public DateTimeOffset CreatedAt { get; set; }
@@ -114,6 +117,9 @@ public sealed class VersionSummary
     public string? Reason { get; set; }
 
     public string? NamedVersion { get; set; }
+
+    /// <summary>DAG 的父版本；长度 &gt; 1 表示合并版本。</summary>
+    public List<string> ParentVersionIds { get; set; } = [];
 
     public DateTimeOffset CreatedAt { get; set; }
 }

@@ -78,7 +78,7 @@ public sealed class HttpWriteSurfaceTests
             KbJson.Wire);
         Assert.Equal(HttpStatusCode.OK, mcp.StatusCode);
         var mcpBody = JsonNode.Parse(await mcp.Content.ReadAsStringAsync())!;
-        Assert.Equal(11, mcpBody["result"]!["tools"]!.AsArray().Count);
+        Assert.Equal(12, mcpBody["result"]!["tools"]!.AsArray().Count);
     }
 
     [Fact]
@@ -204,3 +204,4 @@ public sealed class HttpWriteSurfaceTests
         Assert.Equal(1, retracted!.Removed);
     }
 }
+

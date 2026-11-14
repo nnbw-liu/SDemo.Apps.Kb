@@ -29,7 +29,7 @@ public sealed class McpTests
         JsonSerializer.Deserialize<T>(result["content"]![0]!["text"]!.GetValue<string>(), KbJson.Wire)!;
 
     [Fact]
-    public void 工具面暴露11个工具且写操作带风险()
+    public void 工具面暴露12个工具且写操作带风险()
     {
         using var kb = new TestKb();
         var server = new McpServer(kb.Service);
@@ -38,7 +38,7 @@ public sealed class McpTests
             """{"jsonrpc":"2.0","id":1,"method":"tools/list"}"""))!.AsObject();
         var tools = response["result"]!["tools"]!.AsArray();
 
-        Assert.Equal(11, tools.Count);
+        Assert.Equal(12, tools.Count);
 
         var update = tools.Single(tool => tool!["name"]!.GetValue<string>() == "kb_update")!;
         Assert.Equal("high", update["_meta"]!["sdemo/risk"]!.GetValue<string>());
@@ -120,3 +120,4 @@ public sealed class McpTests
         Assert.NotNull(ping["result"]);
     }
 }
+
