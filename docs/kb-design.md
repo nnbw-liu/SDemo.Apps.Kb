@@ -3,7 +3,7 @@
 > 状态：**设计提案，待拍板**（2026-11-14）
 > 取代/合并：[kb-versioning.md](kb-versioning.md)（版本与追溯，仍有效）· [requirements.md](requirements.md)（需求编号）
 > 配套：[kb-ui.md](kb-ui.md)（界面设计）· [ui-mockups/](ui-mockups/)（可点原型）· [kb-ingest 契约草案](#3-写入面)
-> 关联：[跨产品联动](../../../docs/integration.md) · [Hub 契约](../../../docs/contracts/hub-protocol.md) · [设计系统](../../../docs/shared.md)
+> 关联：[跨产品联动](../../docs/integration.md) · [Hub 契约](../../docs/contracts/hub-protocol.md) · [设计系统](../../docs/shared.md)
 
 ---
 
@@ -424,7 +424,7 @@ derived_state: pending | ready | failed
 | 现规则 | 改成 | 理由 |
 | --- | --- | --- |
 | 应用之间零引用 / 只经 MCP 访问 | 零**业务**调用；允许对 KB 的**单向 ingest** | 写是广播，读才是调用 |
-| KB 是一个 App（`Apps/Kb`） | KB 是服务 + 一个薄 UI 客户端，与 Agent 平级 | 发布节奏跟着契约走 |
+| KB 挂在 `Apps/` 下（旧结构 `Apps/Kb`） | 迁到主仓根级 `Kb/`，与 Agent / Host 并列 | 发布节奏跟着契约走，而不是跟着应用走 |
 | 宿主零业务数据 | 不变；Hub 只负责发现与用户授权拉起 | KB 不写 Hub 的业务表 |
 | 统一搜索靠 Agent fan-out | 文本召回由 KB 一家承担；结构化过滤仍回各 App | 索引不该有三份 |
 | `workspace-memory` 与 KB 并存 | **KB 是真源**，Agent 那份降级为工作区检索缓存 | 两份 FTS 必然漂移 |
@@ -481,4 +481,4 @@ derived_state: pending | ready | failed
 - 界面设计与原型：[kb-ui.md](kb-ui.md) · [ui-mockups/](ui-mockups/)
 - 版本与追溯细节：[kb-versioning.md](kb-versioning.md)
 - 需求编号：[requirements.md](requirements.md)
-- 跨产品契约：[integration.md](../../../docs/integration.md) · [hub-protocol.md](../../../docs/contracts/hub-protocol.md)
+- 跨产品契约：[integration.md](../../docs/integration.md) · [hub-protocol.md](../../docs/contracts/hub-protocol.md)

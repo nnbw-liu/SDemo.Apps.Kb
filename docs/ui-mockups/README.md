@@ -23,7 +23,7 @@
 ## 重新生成
 
 ```powershell
-cd Apps\Kb\docs\ui-mockups
+cd Kb\docs\ui-mockups
 python build.py
 ```
 

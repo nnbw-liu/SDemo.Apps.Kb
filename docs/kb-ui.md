@@ -2,7 +2,7 @@
 
 > 状态：**设计提案，待拍板**（2026-11-14）
 > 配套：[kb-design.md](kb-design.md)（完整设计）· [ui-mockups/](ui-mockups/)（可打开的原型）
-> 依赖：[SDemo.Shared 设计系统](../../../Shared/UI/SDemo.UI.Blazor/wwwroot/css/sdemo-ui.css)
+> 依赖：[SDemo.Shared 设计系统](../../Shared/UI/SDemo.UI.Blazor/wwwroot/css/sdemo-ui.css)
 
 ---
 
@@ -242,7 +242,7 @@
 ## 10. 如何改原型
 
 ```powershell
-cd Apps\Kb\docs\ui-mockups
+cd Kb\docs\ui-mockups
 python build.py          # 重新生成 *.html
 ```
 

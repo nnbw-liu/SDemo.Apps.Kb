@@ -1,20 +1,32 @@
 # AGENTS · sdemo.kb 子仓
 
-> 路由文件。跨产品文档在 `../../docs/`（相对本仓根）。
+> 路由文件。跨产品文档在 `../docs/`（相对本仓根）。
 
 ## 职责
 
 文档实体 + 不可变版本链 + 块级内容寻址 + 差异与引用追溯；只存只找，不持有模型凭证。
 
-## 现状（2026-10-31）
+## 层级
 
-🚧 未开工：只有文档，`src/` 还不存在。需求计划见 [docs/requirements.md](docs/requirements.md)。
+本仓挂在**主仓根级**（`Kb/`），不在 `Apps/` 下：
+
+| 层 | 成员 | 含义 |
+| --- | --- | --- |
+| 根级 | `DesktopAgent/` `DesktopAssembly/` `Kb/` | 可独立部署的进程级产品；KB 是数据面服务 |
+| `Apps/` | `Planner/` `Meeting/` | 插件式应用，各自一摊业务数据 |
+| `Shared/` | SDemo.UI.* | 共享类库，不是产品，没有进程与数据库 |
+
+判断标准：**有独立进程、独立数据目录、要单独发版 → 根级；只是被引用的类库 → Shared；用户点开用的插件 → Apps。**
+
+## 现状（2026-11-14）
+
+🚧 未开工：`src/` 还不存在。设计已齐：[docs/kb-design.md](docs/kb-design.md)（完整设计）、[docs/kb-ui.md](docs/kb-ui.md)（界面 + 原型）、[docs/kb-versioning.md](docs/kb-versioning.md)（版本模型）。
 
 ## 开工先做三件事
 
 1. 按五件套建工程：`src/SDemo.App.Kb.{Contracts,Storage,Core,Mcp,Host}`。
 2. 建 `SDemo.Kb.slnf`；在父仓 `workspaces/kb.json` 把 `status` 改 `active`。
-3. 把 [docs/kb-versioning.md](docs/kb-versioning.md) 的 §10 工具面草案落成真实签名，再换掉本文件。
+3. 把 [docs/kb-design.md](docs/kb-design.md) §3（写入面）与 §5.2（MCP 工具面）落成真实签名，再换掉本文件。
 
 ## 必读
 
@@ -24,8 +36,8 @@
 | **完整设计（写入面 / 保留 / 检索 / 产物）** | [docs/kb-design.md](docs/kb-design.md) |
 | **界面设计与原型** | [docs/kb-ui.md](docs/kb-ui.md) · [docs/ui-mockups/](docs/ui-mockups/) |
 | 版本链 / 块 / diff / 索引面 | [docs/kb-versioning.md](docs/kb-versioning.md) |
-| 跨应用引用 / 统一搜索 | [../../docs/integration.md](../../docs/integration.md) |
-| 组件与宿主 | [../../docs/contracts/](../../docs/contracts/) |
+| 跨应用引用 / 统一搜索 | [../docs/integration.md](../docs/integration.md) |
+| 组件与宿主 | [../docs/contracts/](../docs/contracts/) |
 
 ## 命令（建好工程后启用）
 

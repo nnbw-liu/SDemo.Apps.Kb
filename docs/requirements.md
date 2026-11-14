@@ -2,7 +2,7 @@
 
 > 状态：需求计划（v1），2026-10-31
 > 范围：需求编号 KB-01–KB-13；分期见 §5。
-> 关联：[品牌蓝图](../../../docs/sdemo-brand-blueprint.md) §C · [版本模型](kb-versioning.md) · [联动需求](../../../docs/integration.md)
+> 关联：[品牌蓝图](../../docs/sdemo-brand-blueprint.md) §C · [版本模型](kb-versioning.md) · [联动需求](../../docs/integration.md)
 
 ---
 
@@ -52,7 +52,7 @@
 - 五件套：`SDemo.App.Kb.{Contracts,Storage,Core,Mcp,Host}`；`Mcp` 与领域逻辑物理隔离。
 - 不引用 Agent、不引用其它 App；跨应用只存 URI 字符串，解析责任在 Agent。
 - 工具面：`kb_search` / `kb_get` / `kb_history` / `kb_diff` / `kb_create_block_draft` / `kb_update_block` / `kb_delete_doc` / `kb_import` / `kb_refs`；`kb_update_block` 与 `kb_delete_doc` 为高风险。
-- 契约以主仓 [contracts](../../../docs/contracts/) 为准。
+- 契约以主仓 [contracts](../../docs/contracts/) 为准。
 
 ## 5. 分期与交付
 

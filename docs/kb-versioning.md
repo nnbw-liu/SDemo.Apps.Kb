@@ -1,7 +1,7 @@
 # 知识库：版本、差异与追溯
 
 > 状态：设计稿，2026-10-29
-> 关联：[工作台规划](../../../docs/workbench-roadmap.md) · [待办 MCP 工具面](../../Planner/docs/planner-mcp-surface.md) · [工作区知识库](../../../DesktopAgent/docs/architecture/workspace-memory.md)
+> 关联：[工作台规划](../../docs/workbench-roadmap.md) · [待办 MCP 工具面](../../Apps/Planner/docs/planner-mcp-surface.md) · [工作区知识库](../../DesktopAgent/docs/architecture/workspace-memory.md)
 
 ---
 
@@ -109,7 +109,7 @@
 - 失效判定用 hash，不用时间戳：内容寻址天然幂等。
 - 存储：SQLite 扩展（如 `sqlite-vec`）或旁挂一个小向量文件，先不引独立向量库。
 
-v1 落地仍然只做 FTS5（复用 [workspace-memory.md](../../../DesktopAgent/docs/architecture/workspace-memory.md) §2.2 的 2-gram 预分词），向量留到「关键词明显不够用」再上。
+v1 落地仍然只做 FTS5（复用 [workspace-memory.md](../../DesktopAgent/docs/architecture/workspace-memory.md) §2.2 的 2-gram 预分词），向量留到「关键词明显不够用」再上。
 
 ## 7. 追溯与影响面：引用必须带版本
 
@@ -143,7 +143,7 @@ sdemo.kb/doc/01H…@v3#b2'
 | `kb_change` | 永久（体积小，且是追溯的唯一依据） |
 | 原文导入件（PDF / docx） | 保留原件，随文档删除（走回收站 7 天） |
 
-导入复用现有能力：`IOfficeAttachmentExtractor` / `IPdfAttachmentExtractor`（[Contracts](../../../DesktopAgent/src/Contracts/SDemo.DesktopAgent.Contracts/Abstractions/)）已经能抽文本，导入即建 `v1`（`author=import`），重新导入同一文件则按块 hash 自动算 diff。
+导入复用现有能力：`IOfficeAttachmentExtractor` / `IPdfAttachmentExtractor`（[Contracts](../../DesktopAgent/src/Contracts/SDemo.DesktopAgent.Contracts/Abstractions/)）已经能抽文本，导入即建 `v1`（`author=import`），重新导入同一文件则按块 hash 自动算 diff。
 
 ## 10. MCP 工具面草案（S0 补齐）
 
