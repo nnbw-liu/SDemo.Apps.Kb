@@ -26,10 +26,25 @@ public static partial class KbDocumentImporter
 
     public static IReadOnlyList<TextBlockSpec> Extract(string fileName, Stream stream)
     {
+        var document = ExtractDocument(fileName, stream);
+        if (document.RequiresDerivation)
+        {
+            throw KbException.Invalid("PDF 没有文字层（扫描件需要 Agent OCR，P4-d 尾再接）。");
+        }
+
+        return document.Blocks;
+    }
+
+    /// <summary>
+    /// 与 <see cref="Extract"/> 的差别：没有文字层的 PDF 不抛，返回
+    /// <see cref="ImportedDocument.RequiresDerivation"/>=true，由 KB 建 pending 文档等 Agent OCR。
+    /// </summary>
+    public static ImportedDocument ExtractDocument(string fileName, Stream stream)
+    {
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
         try
         {
-            return extension switch
+            var blocks = extension switch
             {
                 ".md" or ".markdown" => ReadText(stream) is { } markdown
                     ? KbBlockSplitter.SplitMarkdown(markdown)
@@ -43,6 +58,9 @@ public static partial class KbDocumentImporter
                 ".pdf" => ExtractPdf(stream),
                 _ => throw KbException.Invalid($"不支持导入的格式：{extension}"),
             };
+
+            var requiresDerivation = extension == ".pdf" && blocks.Count == 0;
+            return new ImportedDocument(blocks, requiresDerivation);
         }
         catch (KbException)
         {
@@ -371,7 +389,7 @@ public static partial class KbDocumentImporter
 
         if (blocks.Count == 0)
         {
-            throw KbException.Invalid("PDF 没有文字层（扫描件需要 Agent OCR，P4-d 尾再接）。");
+            return blocks;
         }
 
         return blocks;
@@ -411,6 +429,8 @@ public static partial class KbDocumentImporter
     [GeneratedRegex(@"^(?:Heading|标题)\s*(\d)$", RegexOptions.IgnoreCase)]
     private static partial Regex HeadingStyleRegex();
 }
+
+public sealed record ImportedDocument(IReadOnlyList<TextBlockSpec> Blocks, bool RequiresDerivation);
 
 
 

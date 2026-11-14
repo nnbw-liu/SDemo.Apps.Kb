@@ -38,6 +38,17 @@ public sealed partial class KbService
             content.Blocks.Add(MapBlock(blocks[ordinal], ordinal, superseded: version.Id != doc.CurrentVersionId));
         }
 
+        foreach (var blob in session.ListBlobsForDoc(doc.Id))
+        {
+            content.Artifacts.Add(new ArtifactView
+            {
+                Sha256 = blob.Sha256,
+                Mime = blob.Mime,
+                Size = blob.Size,
+                Name = blob.Name,
+            });
+        }
+
         return content;
     }
 

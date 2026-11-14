@@ -51,6 +51,9 @@ public sealed class IngestRequest
     /// <summary>staging 的 TTL 覆盖（天）；缺省按来源取策略。AI 摘要可传 7，图片可传 30。</summary>
     public int? TtlDays { get; set; }
 
+    /// <summary>派生状态；扫描件由导入器置 pending，Agent 回写块后转 ready。</summary>
+    public DerivedState? DerivedState { get; set; }
+
     public string? Rationale { get; set; }
 
     public RationaleSource? RationaleSource { get; set; }

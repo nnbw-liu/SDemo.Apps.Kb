@@ -52,6 +52,10 @@
                         <div class="doc-item-sub">@(string.IsNullOrWhiteSpace(doc.Excerpt) ? "（空正文）" : doc.Excerpt)</div>
                         <div class="doc-item-meta">
                             <span class="@KbUi.RetentionClass(doc.Retention)"><span class="ret-dot"></span>@KbUi.RetentionLabel(doc.Retention)</span>
+                            @if (doc.DerivedState == DerivedState.Pending)
+                            {
+                                <span class="ret ret-staging"><span class="ret-dot"></span>待识别</span>
+                            }
                             @if (doc.InboundRefCount > 0)
                             {
                                 <span class="ret ret-pinned"><span class="ret-dot"></span>被 @doc.InboundRefCount 处引用</span>

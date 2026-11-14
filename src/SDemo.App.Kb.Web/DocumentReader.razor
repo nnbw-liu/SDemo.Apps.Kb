@@ -70,6 +70,13 @@ else
                 </button>
             </div>
 
+            @if (_content.Doc.DerivedState == DerivedState.Pending)
+            {
+                <div class="kb-alert">
+                    原件待识别（扫描件 / 图片）。Agent OCR 回写块后，本文档会自动转为可检索。
+                </div>
+            }
+
             @if (_saveError is not null)
             {
                 <div class="kb-alert">@_saveError</div>
@@ -129,6 +136,21 @@ else
                                     <small>来源已变更</small>
                                 }
                             </button>
+                        }
+                    </div>
+                }
+
+                @if (_content.Artifacts.Count > 0)
+                {
+                    <div class="rail-label" style="margin-top:16px">原件</div>
+                    <div class="foot-chips">
+                        @foreach (var artifact in _content.Artifacts)
+                        {
+                            <span class="ref-chip" title="@artifact.Sha256">
+                                <Icons Name="file" />
+                                <span>@(artifact.Name ?? artifact.Sha256[..Math.Min(8, artifact.Sha256.Length)])</span>
+                                <small>@KbUi.FormatBytes(artifact.Size)</small>
+                            </span>
                         }
                     </div>
                 }

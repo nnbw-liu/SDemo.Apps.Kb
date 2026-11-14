@@ -108,6 +108,11 @@ public sealed class KbSession : IDisposable
         ("$updated", Format(updatedAt)),
         ("$id", docId));
 
+    public void SetDerivedState(string docId, string derivedState) => Execute(
+        "UPDATE kb_doc SET derived_state = $state WHERE id = $id",
+        ("$state", derivedState),
+        ("$id", docId));
+
     public void SetDeleted(string docId, DateTimeOffset deletedAt) => Execute(
         "UPDATE kb_doc SET deleted_at = $at, updated_at = $at WHERE id = $id AND deleted_at IS NULL",
         ("$at", Format(deletedAt)),
@@ -579,6 +584,7 @@ public sealed class KbSession : IDisposable
         var victims = versions.Skip(keep).ToList();
         foreach (var victim in victims)
         {
+            Execute("DELETE FROM kb_blob_ref WHERE version_id = $id", ("$id", victim.Id));
             Execute("DELETE FROM kb_block_edge WHERE version_id = $id", ("$id", victim.Id));
             Execute("DELETE FROM kb_version WHERE id = $id", ("$id", victim.Id));
         }
@@ -999,7 +1005,7 @@ public sealed class KbSession : IDisposable
         bool includeStaging,
         int limit)
     {
-        var where = new StringBuilder("WHERE kb_fts MATCH $q AND d.deleted_at IS NULL");
+        var where = new StringBuilder("WHERE kb_fts MATCH $q AND d.deleted_at IS NULL AND d.derived_state = 'ready'");
         var parameters = new List<(string, object?)>
         {
             ("$q", matchQuery),
@@ -1067,7 +1073,7 @@ public sealed class KbSession : IDisposable
         KbSearchFilter filter,
         int limit)
     {
-        var where = new StringBuilder("WHERE kb_change_fts MATCH $q AND d.deleted_at IS NULL");
+        var where = new StringBuilder("WHERE kb_change_fts MATCH $q AND d.deleted_at IS NULL AND d.derived_state = 'ready'");
         var parameters = new List<(string, object?)>
         {
             ("$q", matchQuery),
@@ -1224,6 +1230,33 @@ public sealed class KbSession : IDisposable
         ("$doc", docId),
         ("$version", versionId));
 
+    public IReadOnlyList<BlobRow> ListBlobsForDoc(string docId)
+    {
+        using var command = Command(
+            """
+            SELECT b.sha256, b.mime, b.size, b.name, b.stored_path
+            FROM kb_blob_ref r JOIN kb_blob b ON b.sha256 = r.blob_sha
+            WHERE r.doc_id = $doc
+            GROUP BY b.sha256
+            ORDER BY b.size DESC
+            """,
+            ("$doc", docId));
+
+        using var reader = command.ExecuteReader();
+        var rows = new List<BlobRow>();
+        while (reader.Read())
+        {
+            rows.Add(new BlobRow(
+                reader.GetString(0),
+                reader.IsDBNull(1) ? null : reader.GetString(1),
+                reader.GetInt64(2),
+                reader.IsDBNull(3) ? null : reader.GetString(3),
+                reader.IsDBNull(4) ? null : reader.GetString(4)));
+        }
+
+        return rows;
+    }
+
     public void UpsertToken(string appId, string tokenHash, DateTimeOffset at) => Execute(
         """
         INSERT INTO kb_token (app_id, token_hash, issued_at, revoked_at)
@@ -1357,3 +1390,4 @@ public sealed class KbSession : IDisposable
     private static DateTimeOffset ParseDate(string value) =>
         DateTimeOffset.Parse(value, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
 }
+

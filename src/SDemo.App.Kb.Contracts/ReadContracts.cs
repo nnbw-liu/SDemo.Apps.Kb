@@ -145,6 +145,20 @@ public sealed class DocContent
     public VersionSummary Version { get; set; } = new();
 
     public List<BlockView> Blocks { get; set; } = [];
+
+    /// <summary>导入原件；pending 派生时也能看到原件的体积与名称。</summary>
+    public List<ArtifactView> Artifacts { get; set; } = [];
+}
+
+public sealed class ArtifactView
+{
+    public string Sha256 { get; set; } = string.Empty;
+
+    public string? Mime { get; set; }
+
+    public long Size { get; set; }
+
+    public string? Name { get; set; }
 }
 
 public sealed class KbGetRequest

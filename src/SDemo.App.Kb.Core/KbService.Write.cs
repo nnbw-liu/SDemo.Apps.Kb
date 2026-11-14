@@ -226,11 +226,12 @@ public sealed partial class KbService
                 System.Text.Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToLowerInvariant())));
 
         using var stream = File.OpenRead(path);
-        return ImportStream(key, Path.GetFileName(path), stream, title, kind, rationale);
+        return ImportStream(key, Path.GetFileName(path), stream, path, title, kind, rationale);
     }
 
     /// <summary>
     /// 从界面导入：没有本机路径，只按文件名做幂等键；同名文件重新导入会按块 diff 生成新版本。
+    /// 原件先落到 cache 临时文件，Ingest 拷贝进 blobs 后再删。
     /// </summary>
     public WriteResult ImportContent(
         string fileName,
@@ -249,8 +250,32 @@ public sealed partial class KbService
             throw KbException.Invalid("文件没有可导入的内容。");
         }
 
-        using var stream = new MemoryStream(content, writable: false);
-        return ImportStream(NameKey(fileName), Path.GetFileName(fileName), stream, title, kind, rationale);
+        var cacheDirectory = Path.Combine(_store.Database.DataDirectory, "cache", "import");
+        Directory.CreateDirectory(cacheDirectory);
+        var temp = Path.Combine(
+            cacheDirectory,
+            Guid.NewGuid().ToString("N") + Path.GetExtension(fileName).ToLowerInvariant());
+
+        try
+        {
+            File.WriteAllBytes(temp, content);
+            using var stream = new MemoryStream(content, writable: false);
+            return ImportStream(NameKey(fileName), Path.GetFileName(fileName), stream, temp, title, kind, rationale);
+        }
+        finally
+        {
+            try
+            {
+                if (File.Exists(temp))
+                {
+                    File.Delete(temp);
+                }
+            }
+            catch (IOException)
+            {
+                // 缓存文件清理失败不影响导入。
+            }
+        }
     }
 
     public WriteResult ImportText(
@@ -283,26 +308,62 @@ public sealed partial class KbService
         string key,
         string fileName,
         Stream stream,
+        string? originalPath,
         string? title,
         KbKind kind,
         string? rationale)
     {
-        var specs = KbDocumentImporter.Extract(fileName, stream);
-        if (specs.Count == 0)
+        var imported = KbDocumentImporter.ExtractDocument(fileName, stream);
+
+        List<BlockInput> blocks;
+        DerivedState? derivedState = null;
+
+        if (imported.RequiresDerivation)
         {
-            throw KbException.Invalid("文件没有可导入的文本块。");
+            var size = originalPath is not null && File.Exists(originalPath)
+                ? new FileInfo(originalPath).Length
+                : 0;
+            blocks =
+            [
+                new BlockInput
+                {
+                    Op = ChangeOp.Add,
+                    Text = $"（原件「{fileName}」待识别 · {size} 字节；等待 Agent OCR 回写）",
+                },
+            ];
+            derivedState = DerivedState.Pending;
+        }
+        else
+        {
+            if (imported.Blocks.Count == 0)
+            {
+                throw KbException.Invalid("文件没有可导入的文本块。");
+            }
+
+            blocks = imported.Blocks
+                .Select(spec => new BlockInput
+                {
+                    Op = ChangeOp.Add,
+                    Text = spec.Text,
+                    IsHeading = spec.IsHeading,
+                    HeadingLevel = spec.HeadingLevel,
+                    Anchor = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(spec.AnchorJson!),
+                })
+                .ToList();
         }
 
-        var blocks = specs
-            .Select(spec => new BlockInput
+        var artifacts = new List<IngestArtifact>();
+        if (!string.IsNullOrWhiteSpace(originalPath) && File.Exists(originalPath))
+        {
+            artifacts.Add(new IngestArtifact
             {
-                Op = ChangeOp.Add,
-                Text = spec.Text,
-                IsHeading = spec.IsHeading,
-                HeadingLevel = spec.HeadingLevel,
-                Anchor = System.Text.Json.JsonSerializer.Deserialize<System.Text.Json.JsonElement>(spec.AnchorJson!),
-            })
-            .ToList();
+                Role = "source",
+                Name = fileName,
+                Mime = KbMime.ForFile(fileName),
+                Size = new FileInfo(originalPath).Length,
+                Path = originalPath,
+            });
+        }
 
         var ingest = new IngestRequest
         {
@@ -314,9 +375,13 @@ public sealed partial class KbService
             Kind = kind,
             Title = title ?? Path.GetFileNameWithoutExtension(fileName),
             Retention = RetentionLevel.Durable,
-            Rationale = rationale ?? $"导入 {fileName}",
+            DerivedState = derivedState,
+            Rationale = rationale ?? (derivedState == DerivedState.Pending
+                ? $"导入扫描件 {fileName}，待 OCR"
+                : $"导入 {fileName}"),
             RationaleSource = RationaleSource.Import,
             Blocks = blocks,
+            Artifacts = artifacts,
         };
 
         return Ingest(ingest, KbConstants.AppId);
@@ -351,7 +416,7 @@ public sealed partial class KbService
             request.Source.EntityUri.Trim(),
             KbUri.Doc(docId),
             ToWire(retention),
-            ToWire(DerivedState.Ready),
+            ToWire(request.DerivedState ?? DerivedState.Ready),
             null,
             now,
             now,
@@ -475,6 +540,12 @@ public sealed partial class KbService
         if (blocks.Count == 0)
         {
             throw KbException.Invalid("投影至少要有一个非空块。");
+        }
+
+        if (request.DerivedState is { } requestedState)
+        {
+            session.SetDerivedState(doc.Id, ToWire(requestedState));
+            doc = doc with { DerivedState = ToWire(requestedState) };
         }
 
         var hash = KbText.ContentHash(blocks.Select(block => block.ContentHash));
@@ -628,6 +699,11 @@ public sealed partial class KbService
         }
 
         session.SetCurrentVersion(doc.Id, version.Id, now);
+        if (string.Equals(doc.DerivedState, ToWire(DerivedState.Pending), StringComparison.Ordinal))
+        {
+            session.SetDerivedState(doc.Id, ToWire(DerivedState.Ready));
+        }
+
         if (links.Count > 0)
         {
             ReplaceLinks(session, doc, version.Seq, links, doc.OwnerApp, now);
@@ -963,4 +1039,6 @@ public sealed partial class KbService
         where TEnum : struct, Enum =>
         Enum.TryParse<TEnum>(value, ignoreCase: true, out var parsed) ? parsed : fallback;
 }
+
+
 

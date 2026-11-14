@@ -157,6 +157,78 @@ public sealed class DocumentImportTests
         Assert.Equal("note", content.Doc.Title);
         Assert.Equal("导入的 Word 文档", content.Blocks[0].Text);
     }
+
+    [Fact]
+    public void 导入原件写入blobs并按doc聚合()
+    {
+        using var stream = new MemoryStream();
+        using (var document = WordprocessingDocument.Create(stream, WordprocessingDocumentType.Document))
+        {
+            var main = document.AddMainDocumentPart();
+            main.Document = new Document(new Body(
+                new Paragraph(new WRun(new WText("带原件的导入")))));
+        }
+
+        using var kb = new TestKb();
+        var bytes = stream.ToArray();
+        var result = kb.Service.ImportContent("original.docx", bytes);
+
+        var content = kb.Service.Get(new KbGetRequest { DocId = result.DocId })!;
+        var artifact = Assert.Single(content.Artifacts);
+        Assert.Equal("original.docx", artifact.Name);
+        Assert.Equal(bytes.Length, artifact.Size);
+        Assert.True(kb.Service.GetStorageStats().BlobBytes >= bytes.Length);
+
+        var stored = Path.Combine(kb.DataDirectory, "blobs", artifact.Sha256[..2], artifact.Sha256);
+        Assert.True(File.Exists(stored));
+    }
+
+    [Fact]
+    public void 无文字层PDF建pending文档_回写后转ready并可检索()
+    {
+        var builder = new PdfDocumentBuilder();
+        _ = builder.AddPage(PdfPageSize.A4);
+        var bytes = builder.Build();
+
+        using var kb = new TestKb();
+        var result = kb.Service.ImportContent("scan.pdf", bytes);
+
+        var pending = kb.Service.Get(new KbGetRequest { DocId = result.DocId })!;
+        Assert.Equal(DerivedState.Pending, pending.Doc.DerivedState);
+        var placeholder = Assert.Single(pending.Blocks);
+        Assert.Contains("待识别", placeholder.Text);
+
+        // pending 文档不进检索面。
+        Assert.True(kb.Service.Search(new KbSearchRequest { Query = "待识别" }).NoHit);
+
+        // Agent OCR 回写：替换占位块后自动转 ready。
+        kb.Service.Update(
+            new KbUpdateRequest
+            {
+                DocId = result.DocId,
+                ExpectedVersion = 1,
+                Rationale = "OCR 完成",
+                RationaleSource = RationaleSource.Ai,
+                Ops =
+                [
+                    new BlockInput
+                    {
+                        Op = ChangeOp.Replace,
+                        BlockId = placeholder.BlockId,
+                        Text = "OCR 回来的正文：部署方案。",
+                    },
+                ],
+            },
+            "sdemo.kb");
+
+        var ready = kb.Service.Get(new KbGetRequest { DocId = result.DocId })!;
+        Assert.Equal(DerivedState.Ready, ready.Doc.DerivedState);
+        Assert.Equal("OCR 回来的正文：部署方案。", ready.Blocks[0].Text);
+
+        var hit = kb.Service.Search(new KbSearchRequest { Query = "OCR" });
+        Assert.False(hit.NoHit);
+        Assert.Contains(hit.Hits, item => item.DocId == result.DocId);
+    }
 }
 
 
