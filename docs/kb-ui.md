@@ -54,7 +54,7 @@
 | 01L | 浅色主题 | 同一屏的浅色形态 | [图](ui-mockups/01-library-light.png) |
 | 02 | 文档详情 | 块阅读 + 版本链 + 引用 + 理由 | [图](ui-mockups/02-document.png) · [HTML](ui-mockups/02-document.html) |
 | 03 | 版本对比 | 块级 diff + 词级高亮 + rationale | [图](ui-mockups/03-diff.png) · [HTML](ui-mockups/03-diff.html) |
-| 04 | 待归档收件箱 | staging 的批量归档 / 清理 | [图](ui-mockups/04-inbox.png) · [HTML](ui-mockups/04-inbox.html) |
+| 04 | 待归档 | staging 的批量归档 / 清理 | [图](ui-mockups/04-inbox.png) · [HTML](ui-mockups/04-inbox.html) |
 | 05 | 导入 | 拖入、队列、派生状态 | [图](ui-mockups/05-import.png) · [HTML](ui-mockups/05-import.html) |
 | 06 | 检索 | 四个索引面 + 命中理由 | [图](ui-mockups/06-search.png) · [HTML](ui-mockups/06-search.html) |
 | 07 | 设置 | 保留 / 检索 / 存储 | [图](ui-mockups/07-settings.png) · [HTML](ui-mockups/07-settings.html) |
@@ -103,9 +103,9 @@
 - "4 块复用 · 未变"默认折叠——内容寻址的结果，不该占屏幕。
 - rationale 卡片在下方：diff 回答"改了什么"，它回答"为什么改"。
 
-### 04 待归档收件箱
+### 04 待归档
 
-![待归档收件箱](ui-mockups/04-inbox.png)
+![待归档](ui-mockups/04-inbox.png)
 
 这是本次设计里最关键的**新**界面——把"归档"从弹窗变成一个可批量操作的工作台。
 
@@ -249,3 +249,4 @@ python build.py          # 重新生成 *.html
 - 版式改动：改 `kb.css`（只允许用 `sdemo-ui.css` 的 token）。
 - 设计 token 改动：改 `Shared` 子仓并升版本，回来同步 `sdemo-ui.css` 副本。
 - 截图命令见 [ui-mockups/README.md](ui-mockups/README.md)（Chrome headless，1440×900）。
+

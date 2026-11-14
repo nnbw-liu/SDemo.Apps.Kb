@@ -130,6 +130,20 @@ POST /v1/retract    软删
 
 `promote` 是本次新增的第四个动词——**归档不是新建，而是同一个 docId 改 `retention`**。否则用户归档后库里会出现"三稿"和"三稿(归档)"两份。
 
+### 3.3.1 引用登记 `/v1/refs`
+
+外部实体（Planner 待办、Meeting 议题）对 KB 的引用**必须登记**，否则 `kb_refs` 只能看到文档之间的引用，
+回收站清理也不会因为待办引用了某块而保护它：
+
+| 动词 | 路径 | 说明 |
+| --- | --- | --- |
+| 登记 | `POST /v1/refs` | `source{appId,entityUri}` + `to`（必须带版本）+ `rel`；`(from,to,rel)` 幂等 |
+| 撤销 | `POST /v1/refs/retract` | 按来源实体撤销，可限定 `to` / `rel` |
+| 查询 | `GET /v1/refs?fromUri=…` | 普通 App 只能看自己的登记 |
+
+落地方式：写入 `kb_link`，`doc_id=''` 表示 from 不属于 KB 文档；`target_doc_id/version/block_id` 与文档内引用同构。
+影响面、`kb_delete` 的影响清单、块 GC、回收站物理清理都统一读这张表。
+
 ### 3.4 请求形状
 
 ```jsonc
@@ -454,7 +468,7 @@ derived_state: pending | ready | failed
 | 期 | 范围 | 验收 |
 | --- | --- | --- |
 | **P4-a 地基** | 版本链、块、FTS、`resolve`、写面契约 + outbox 投递 | 100 篇导入后关键词命中；改一段只增一个版本；KB 离线时 App 不报错 |
-| **P4-b 保留** | staging/durable、promote、TTL、引用保护、待归档收件箱 | 归档后全量保留；到期清理不影响引用方 |
+| **P4-b 保留** | staging/durable、promote、TTL、引用保护、待归档 | 归档后全量保留；到期清理不影响引用方 |
 | **P4-c 追溯** | diff、rationale 三入口、影响面清单 | "为什么改成 D"可答；引用变更能列出受影响待办 |
 | **P4-d 产物** | docx/pptx/xlsx/pdf 导入、anchor、派生状态机 | 表格命中行摘要并定位到单元格；图片待识别状态可见 |
 | **P4+** | 向量化（仅当 §6.4 触发门达标） | 懒嵌入跑通，可一键回退 lexical |
@@ -469,7 +483,7 @@ derived_state: pending | ready | failed
 | R2 | 投影 schema 演进导致内容错乱 | `projectionVersion` + `kb_rebuild_projection(appId)` |
 | R3 | 版本链 + 全量原件导致磁盘增长 | 配额告警 + "原件占用"可见 + 缓存可重建 |
 | R4 | 格式解析库把安装包撑大 | `pack.ps1` 里量产物体积，docx/pptx 共用一个 OOXML 库 |
-| R5 | 用户不点归档 → 内容全被 TTL 清 | 收件箱红点 + 侧栏提示 + "即将清理"批量入口 |
+| R5 | 用户不点归档 → 内容全被 TTL 清 | 待归档红点 + 侧栏提示 + "即将清理"批量入口 |
 | Q1 | `workspace-memory` 何时并入 KB | P4 之后作为数据迁移，不混在功能开发里 |
 | Q2 | 撤销归档是否允许 | 允许，但二次确认（可能已被引用） |
 | Q3 | 团队版是否内嵌本地 ONNX | 读者是系统时走 A 方案；当前不适用 |
@@ -482,3 +496,4 @@ derived_state: pending | ready | failed
 - 版本与追溯细节：[kb-versioning.md](kb-versioning.md)
 - 需求编号：[requirements.md](requirements.md)
 - 跨产品契约：[integration.md](../../docs/integration.md) · [hub-protocol.md](../../docs/contracts/hub-protocol.md)
+

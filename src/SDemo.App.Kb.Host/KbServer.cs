@@ -274,6 +274,36 @@ public sealed class KbServer : IDisposable
                     return;
                 }
 
+                case "/v1/refs" when IsPost(request):
+                {
+                    var body = await ReadBodyAsync(request).ConfigureAwait(false);
+                    var payload = KbJson.Deserialize<RefRegistrationRequest>(body)
+                        ?? throw KbException.Invalid("请求体为空。");
+                    await WriteJsonAsync(response, 200, _service.RegisterRef(payload, appId)).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/refs":
+                {
+                    var fromUri = request.QueryString["fromUri"];
+                    if (string.IsNullOrWhiteSpace(fromUri))
+                    {
+                        throw KbException.Invalid("缺少 fromUri。");
+                    }
+
+                    await WriteJsonAsync(response, 200, _service.ListRefs(fromUri, appId)).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/refs/retract" when IsPost(request):
+                {
+                    var body = await ReadBodyAsync(request).ConfigureAwait(false);
+                    var payload = KbJson.Deserialize<RefRetractRequest>(body)
+                        ?? throw KbException.Invalid("请求体为空。");
+                    await WriteJsonAsync(response, 200, _service.RetractRefs(payload, appId)).ConfigureAwait(false);
+                    return;
+                }
+
                 case "/v1/inbox":
                 {
                     var limit = int.TryParse(request.QueryString["limit"], out var parsed) ? parsed : 100;

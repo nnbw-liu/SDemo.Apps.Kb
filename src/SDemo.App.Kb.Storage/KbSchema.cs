@@ -101,6 +101,7 @@ public static class KbSchema
         CREATE INDEX IF NOT EXISTS ix_kb_link_target ON kb_link(target_doc_id);
         CREATE INDEX IF NOT EXISTS ix_kb_link_target_block ON kb_link(target_block_id);
         CREATE INDEX IF NOT EXISTS ix_kb_link_doc ON kb_link(doc_id);
+        CREATE INDEX IF NOT EXISTS ix_kb_link_from_uri ON kb_link(from_uri);
 
         CREATE TABLE IF NOT EXISTS kb_blob (
             sha256      TEXT PRIMARY KEY,

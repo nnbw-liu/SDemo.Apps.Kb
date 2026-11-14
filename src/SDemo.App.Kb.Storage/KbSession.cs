@@ -833,6 +833,91 @@ public sealed class KbSession : IDisposable
         return ReadLinks(command);
     }
 
+    /// <summary>外部实体（todo / 会议议题 / …）登记一条指向 KB 的引用；from 不属于任何 KB 文档。</summary>
+    public void UpsertExternalRef(LinkRow link) => Execute(
+        """
+        INSERT INTO kb_link
+            (id, doc_id, from_uri, to_uri, rel, owner_app, target_doc_id,
+             target_version, target_block_id, created_at, updated_at)
+        VALUES ($id, '', $from, $to, $rel, $owner, $targetDoc, $targetVersion, $targetBlock, $created, $updated)
+        ON CONFLICT(from_uri, to_uri, rel) DO UPDATE SET
+            owner_app = excluded.owner_app,
+            target_doc_id = excluded.target_doc_id,
+            target_version = excluded.target_version,
+            target_block_id = excluded.target_block_id,
+            updated_at = excluded.updated_at
+        """,
+        ("$id", link.Id),
+        ("$from", link.FromUri),
+        ("$to", link.ToUri),
+        ("$rel", link.Rel),
+        ("$owner", link.OwnerApp),
+        ("$targetDoc", link.TargetDocId),
+        ("$targetVersion", link.TargetVersion),
+        ("$targetBlock", link.TargetBlockId),
+        ("$created", Format(link.CreatedAt)),
+        ("$updated", Format(link.UpdatedAt)));
+
+    public bool ExistsExternalRef(string fromUri, string toUri, string rel)
+    {
+        using var command = Command(
+            """
+            SELECT 1 FROM kb_link
+            WHERE doc_id = '' AND from_uri = $from AND to_uri = $to AND rel = $rel
+            LIMIT 1
+            """,
+            ("$from", fromUri),
+            ("$to", toUri),
+            ("$rel", rel));
+        return command.ExecuteScalar() is not null;
+    }
+
+    public int DeleteExternalRefs(string fromUri, string ownerApp, string? toUri, string? rel)
+    {
+        var where = new StringBuilder("DELETE FROM kb_link WHERE doc_id = '' AND from_uri = $from AND owner_app = $owner");
+        var parameters = new List<(string, object?)>
+        {
+            ("$from", fromUri),
+            ("$owner", ownerApp),
+        };
+
+        if (!string.IsNullOrWhiteSpace(toUri))
+        {
+            where.Append(" AND to_uri = $to");
+            parameters.Add(("$to", toUri));
+        }
+
+        if (!string.IsNullOrWhiteSpace(rel))
+        {
+            where.Append(" AND rel = $rel");
+            parameters.Add(("$rel", rel));
+        }
+
+        return Execute(where.ToString(), parameters.ToArray());
+    }
+
+    public IReadOnlyList<LinkRow> ListExternalRefs(string fromUri, string? ownerApp)
+    {
+        var where = new StringBuilder("WHERE doc_id = '' AND from_uri = $from");
+        var parameters = new List<(string, object?)> { ("$from", fromUri) };
+
+        if (!string.IsNullOrWhiteSpace(ownerApp))
+        {
+            where.Append(" AND owner_app = $owner");
+            parameters.Add(("$owner", ownerApp));
+        }
+
+        using var command = Command(
+            $"""
+            SELECT id, doc_id, from_uri, to_uri, rel, owner_app, target_doc_id,
+                   target_version, target_block_id, created_at, updated_at
+            FROM kb_link {where}
+            ORDER BY updated_at DESC
+            """,
+            parameters.ToArray());
+        return ReadLinks(command);
+    }
+
     public int CountInboundLinks(string docId)
     {
         using var command = Command(

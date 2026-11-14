@@ -3,7 +3,7 @@
 **sdemo.kb**：个人文档的版本、差异、检索与引用追溯。只存只找，**不持有模型凭证**。
 
 > 本仓是 [SDemo 主仓](https://github.com/nnbw-liu/SDemo) 的子模块（`Kb/`，主仓根级）。
-> 状态：**P4-a 地基 + P4-b 保留 + P4-e 查看器第一刀**（2026-11-14）——七工程、`SDemo.Kb.slnf`、52 个测试。
+> 状态：**P4-a 地基 + P4-b 保留 + P4-e 查看器第一刀**（2026-11-14）——七工程、`SDemo.Kb.slnf`、58 个测试。
 >
 > **定位**：KB 不是一个应用，而是一块数据面 + 一个查看器。它与 DesktopAgent、DesktopAssembly 同级，**不挂在 `Apps/` 下**——写面是给所有应用用的协议，读面才是产品。
 
@@ -18,9 +18,10 @@
 | 块级 + 词级 diff | `kb_diff` |
 | 变更理由 `rationale` | 文档右栏 / `kb_changes` |
 | 引用 `docId@v<seq>#<blockId>` + 影响面反查 | 文档右栏 / `kb_refs` / `POST /v1/resolve` |
+| 外部实体登记引用（Planner/Meeting） | `POST /v1/refs` / `POST /v1/refs/retract` |
 | AI 写摘要（不调模型） | `kb_annotate` |
 | 暂存 TTL / 回收站 / 引用保护 / 块与原件 GC | 后台维护 / `--maintain` |
-| 待归档收件箱 + 批量归档 + 存储统计 | 查看器「待归档」 / `/v1/inbox` `/v1/stats` |
+| 待归档 + 批量归档 + 存储统计 | 查看器「待归档」 / `/v1/inbox` `/v1/stats` |
 | KB 离线时写入不丢 | `KbOutbox` + `KbIngestClient` |
 
 未做：03 版本对比 / 05 导入 / 07 设置屏、docx / pptx / xlsx / pdf 解析（P4-d）、命名修订与多父合并（P4-c）、向量检索（P4+）。
@@ -88,5 +89,6 @@ Content-Type: application/json
 - **版本不可变**：一次改动新建一个版本；块级内容寻址去重；引用存 `docId@version#block`。
 - **不做向量化差异**：只对块内容做 embedding（P2 需求，v1 可后置）。
 - 数据目录 `%APPDATA%\SDemo\Apps\sdemo.kb\`（`kb.db` + `blobs\` + `cache\`）。
+
 
 

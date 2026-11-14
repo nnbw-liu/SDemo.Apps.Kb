@@ -20,7 +20,7 @@
 
 ## 现状（2026-11-14）
 
-✅ **P4-a 地基 + P4-b 保留 + P4-e 第一刀（查看器四屏）已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 52 个测试。
+✅ **P4-a 地基 + P4-b 保留 + P4-e 第一刀（查看器四屏）已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 58 个测试。
 
 | 已做 | 说明 |
 | --- | --- |
@@ -29,16 +29,17 @@
 | 三索引面 + 路由 | 当前态 / 历史态 / 变更事实（+ 暂存需 `scope=recent`）；关键词路由「现在 / 以前 / 为什么 / 最近」 |
 | 中文检索 | FTS5 + 2-gram 预分词；`hitTerms` / `noHit` 随结果返回 |
 | 差异 | 块级 LCS 对齐 + 词级 diff；`kb_change` 永久保留 before/after/rationale |
-| 引用 | `docId@v<seq>#<blockId>`；`/v1/resolve` 只回元数据；`kb_refs` 反查影响面 |
+| 引用 | `docId@v<seq>#<blockId>`；`/v1/resolve` 只回元数据；`kb_refs` 反查影响面；外部实体可登记引用 |
 | 写面 | `/v1/ingest` `/v1/revise` `/v1/promote` `/v1/retract`；per-app Bearer token；幂等 |
+| 引用登记 | `/v1/refs` / `/v1/refs/retract`：Planner/Meeting 把实体 URI 对 KB 的引用写进 `kb_link`（`doc_id=''`），影响面/GC/清理保护才算数 |
 | MCP | 11 个 `kb_*` 工具 + 风险/审批元数据；`kb_update` / `kb_delete` 高风险 |
 | 写入方 outbox | `KbOutbox` + `KbIngestClient`；KB 离线时写入落本地队列，不抛回业务事务 |
 | 导入 | md / txt；导入即建 `v1`，再次导入同一路径按块 diff 建新版本 |
 | **保留与 GC** | staging TTL（会议 30 / Agent 90，可被 `ttlDays` 覆盖）→ 软删 → 回收站 7 天 → 块/原件 GC；被引用文档整篇保护 |
-| **收件箱与统计** | `/v1/inbox`（到期倒计时、正文/原件体积）、`/v1/promote-batch`、`/v1/stats`、`/v1/settings/retention`；Host 每小时维护，`--maintain` 手动跑 |
+| **待归档与统计** | `/v1/inbox`（到期倒计时、正文/原件体积）、`/v1/promote-batch`、`/v1/stats`、`/v1/settings/retention`；Host 每小时维护，`--maintain` 手动跑 |
 | **查看器** | WPF + BlazorWebView（选项 A：内嵌 KbServer）；01 全部文档 / 02 文档详情（含版本链、引用、变更理由、块编辑）/ 04 待归档 / 06 检索；深浅色、Ctrl K |
 
-**未做（按分期）**：03 版本对比、05 导入、07 设置屏（P4-e 后半）；docx / pptx / xlsx / pdf 解析与 anchor（P4-d）；命名修订与多父合并（P4-c）；向量检索（P4+）。
+**未做（按分期）**：03 版本对比、05 导入、07 设置屏（P4-e 后半）；docx / pptx / xlsx / pdf 解析与 anchor（P4-d）；命名修订与多父合并（P4-c）；Planner/Meeting 侧的 `/v1/refs` 自动登记（KB 契约已完成，App 接入待做）；向量检索（P4+）。
 
 ## 工程结构
 
@@ -90,6 +91,9 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 | revise | `POST /v1/revise` | 块级 ops + `expectedVersion`；只有 add / replace / remove |
 | promote | `POST /v1/promote` | 改 `retention`；durable → staging 必须 `confirmed=true`；staging 重新算 `expires_at` |
 | retract | `POST /v1/retract` | 软删；返回受影响引用清单 |
+| refs | `POST /v1/refs` | 外部实体登记引用；`to` 必须带版本；`(from,to,rel)` 幂等 |
+| refs/retract | `POST /v1/refs/retract` | 按来源实体撤销登记 |
+| refs 查询 | `GET /v1/refs?fromUri=…` | 查该实体登记过的引用；普通 App 只能看自己的 |
 | inbox | `GET /v1/inbox` | 待归档列表：到期倒计时、正文/原件体积；仅 KB / Agent |
 | promote-batch | `POST /v1/promote-batch` | 批量归档（最多 200）；逐条返回成功/失败 |
 | stats | `GET /v1/stats` | 库体积、原件体积、可清理项、文档/块/版本计数 |
@@ -143,6 +147,8 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 - 标题参与 FTS terms（×4）；改标题必须重建该文档所有块的索引。
 - TTL 只对 staging 生效；durable / requirement 的 `expires_at` 必须为 NULL。
 - 回收站物理清理前必须先看 `kb_link`：有入库引用的文档整篇保留，否则历史引用会变成死链。
+- 外部引用登记进 `kb_link` 时 `doc_id=''`；`ReplaceOutboundLinks` 只删 `doc_id=文档` 的行，不会误删外部登记。
+- 只把引用存在 App 自己的 `link` 表里，KB 看不到——影响面和引用保护都只成立一半。
 - 块 GC 的条件是「无版本边 + 无引用」；只删版本边不删块，历史才读得到。
 - Schema 变更必须走 `KbSchema.Migrate` + `PRAGMA user_version`，不能只改 `CREATE TABLE IF NOT EXISTS`。
 - Viewer 必须是 `Microsoft.NET.Sdk.Razor` + `UseWPF`，否则 `_framework/blazor.webview.js` 不会随静态资产提供，界面停在「正在启动」。
@@ -154,5 +160,6 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 ## 不要读
 
 `obj/`、`bin/`、`TestResults/`、模型/索引缓存；`docs/requirements.md` 只通读一次。
+
 
 

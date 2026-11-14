@@ -105,6 +105,13 @@ public static class KbUi
 
     public static string ShortId(string id) => id.Length <= 8 ? id : id[..8];
 
+    /// <summary>外部来源 URI 太长，右栏只显示去掉 sdemo. 前缀后的尾部。</summary>
+    public static string ShortFrom(string uri)
+    {
+        var value = uri.StartsWith("sdemo.", StringComparison.Ordinal) ? uri["sdemo.".Length..] : uri;
+        return value.Length <= 28 ? value : "…" + value[^27..];
+    }
+
     public static string BlockAnchor(BlockView block) =>
         $"#{ShortId(block.BlockId)} · 第 {block.Ordinal + 1} 块";
 }

@@ -151,4 +151,56 @@ public sealed class HttpWriteSurfaceTests
         var inbox = await client.GetAsync("/v1/inbox");
         Assert.Equal(HttpStatusCode.Forbidden, inbox.StatusCode);
     }
+
+    [Fact]
+    public async Task 外部应用可以登记与撤销引用()
+    {
+        using var kb = new TestKb();
+        var target = kb.Ingest("目标文档", ["被引用的块"]);
+        var blockId = kb.Service.Get(new KbGetRequest { DocId = target.DocId })!.Blocks[0].BlockId;
+
+        using var server = new KbServer(kb.Service);
+        server.Start();
+
+        var plannerToken = kb.Service.IssueToken("sdemo.planner");
+        using var client = Client(server, plannerToken);
+
+        var registration = new RefRegistrationRequest
+        {
+            Source = new IngestSource
+            {
+                AppId = "sdemo.planner",
+                EntityUri = "sdemo.planner/todo/http-ref",
+            },
+            To = KbUri.Format(target.DocId, 1, blockId),
+            Rel = "based_on",
+        };
+
+        var register = await client.PostAsJsonAsync("/v1/refs", registration, KbJson.Wire);
+        Assert.Equal(HttpStatusCode.OK, register.StatusCode);
+        var registered = await register.Content.ReadFromJsonAsync<RefRegistrationResult>(KbJson.Wire);
+        Assert.True(registered!.Created);
+
+        var list = await client.GetFromJsonAsync<RefListResult>(
+            "/v1/refs?fromUri=sdemo.planner%2Ftodo%2Fhttp-ref",
+            KbJson.Wire);
+        Assert.NotNull(list);
+        Assert.Single(list!.Items);
+        Assert.Equal("sdemo.planner", list.Items[0].OwnerApp);
+
+        var retract = await client.PostAsJsonAsync(
+            "/v1/refs/retract",
+            new RefRetractRequest
+            {
+                Source = new IngestSource
+                {
+                    AppId = "sdemo.planner",
+                    EntityUri = "sdemo.planner/todo/http-ref",
+                },
+            },
+            KbJson.Wire);
+        Assert.Equal(HttpStatusCode.OK, retract.StatusCode);
+        var retracted = await retract.Content.ReadFromJsonAsync<RefRetractResult>(KbJson.Wire);
+        Assert.Equal(1, retracted!.Removed);
+    }
 }

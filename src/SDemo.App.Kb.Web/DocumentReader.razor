@@ -155,6 +155,7 @@ else
                         <div class="ref-row">
                             <span class="ref-owner">@link.OwnerApp</span>
                             <span class="ref-rel">@link.Rel</span>
+                            <span class="ref-from" title="@link.FromUri">@KbUi.ShortFrom(link.FromUri)</span>
                             @if (link.Stale || link.BlockMissing)
                             {
                                 <span class="ret ret-staging"><span class="ret-dot"></span>来源已变更</span>
