@@ -1,0 +1,13 @@
+{
+  "solution": {
+    "path": "SDemo.Kb.sln",
+    "projects": [
+      "src\\SDemo.App.Kb.Contracts\\SDemo.App.Kb.Contracts.csproj",
+      "src\\SDemo.App.Kb.Storage\\SDemo.App.Kb.Storage.csproj",
+      "src\\SDemo.App.Kb.Core\\SDemo.App.Kb.Core.csproj",
+      "src\\SDemo.App.Kb.Mcp\\SDemo.App.Kb.Mcp.csproj",
+      "src\\SDemo.App.Kb.Host\\SDemo.App.Kb.Host.csproj",
+      "tests\\SDemo.Kb.Tests\\SDemo.Kb.Tests.csproj"
+    ]
+  }
+}

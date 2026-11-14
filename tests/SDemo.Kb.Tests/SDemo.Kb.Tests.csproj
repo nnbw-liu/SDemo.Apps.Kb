@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 纯核心测试：存储 / 版本链 / FTS / diff / 引用 / MCP JSON-RPC / 回环写面。 -->
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>SDemo.Kb.Tests</RootNamespace>
+    <AssemblyName>SDemo.Kb.Tests</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\SDemo.App.Kb.Contracts\SDemo.App.Kb.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\SDemo.App.Kb.Storage\SDemo.App.Kb.Storage.csproj" />
+    <ProjectReference Include="..\..\src\SDemo.App.Kb.Core\SDemo.App.Kb.Core.csproj" />
+    <ProjectReference Include="..\..\src\SDemo.App.Kb.Mcp\SDemo.App.Kb.Mcp.csproj" />
+    <ProjectReference Include="..\..\src\SDemo.App.Kb.Host\SDemo.App.Kb.Host.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 契约层：写入面 DTO / MCP 入参 / URI / 枚举 / 错误码。纯 DTO，不含存储与逻辑。 -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SDemo.App.Kb.Contracts</RootNamespace>
+    <AssemblyName>SDemo.App.Kb.Contracts</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+</Project>

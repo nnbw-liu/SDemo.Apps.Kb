@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 领域服务：版本链、块切分与 hash、diff、检索路由、引用与影响面、保留策略。 -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>SDemo.App.Kb.Core</RootNamespace>
+    <AssemblyName>SDemo.App.Kb.Core</AssemblyName>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SDemo.App.Kb.Contracts\SDemo.App.Kb.Contracts.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Storage\SDemo.App.Kb.Storage.csproj" />
+  </ItemGroup>
+
+</Project>

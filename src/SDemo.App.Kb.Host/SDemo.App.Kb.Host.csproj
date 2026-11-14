@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- 组合根：回环 HTTP（写面 + resolve + MCP 传输）、运行期文件、进程生命周期。
+         第一阶段不做界面；查看器在 P4-b 之后接入。 -->
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>SDemo.App.Kb.Host</RootNamespace>
+    <AssemblyName>SDemo.Kb</AssemblyName>
+    <Product>SDemo KB</Product>
+    <AssemblyTitle>SDemo KB</AssemblyTitle>
+    <Description>sdemo.kb · 文档版本与检索数据面</Description>
+    <Version>0.1.0</Version>
+    <FileVersion>0.1.0.0</FileVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\SDemo.App.Kb.Contracts\SDemo.App.Kb.Contracts.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Storage\SDemo.App.Kb.Storage.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Core\SDemo.App.Kb.Core.csproj" />
+    <ProjectReference Include="..\SDemo.App.Kb.Mcp\SDemo.App.Kb.Mcp.csproj" />
+  </ItemGroup>
+
+</Project>
