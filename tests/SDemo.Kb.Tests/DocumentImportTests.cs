@@ -199,6 +199,13 @@ public sealed class DocumentImportTests
         var placeholder = Assert.Single(pending.Blocks);
         Assert.Contains("待识别", placeholder.Text);
 
+        var pendingList = kb.Service.ListDerivations("sdemo.agent");
+        var item = Assert.Single(pendingList.Items);
+        Assert.Equal(result.DocId, item.DocId);
+        Assert.Equal(placeholder.BlockId, item.PlaceholderBlockId);
+        Assert.Single(item.Artifacts);
+        Assert.True(File.Exists(item.Artifacts[0].StoredPath));
+
         // pending 文档不进检索面。
         Assert.True(kb.Service.Search(new KbSearchRequest { Query = "待识别" }).NoHit);
 

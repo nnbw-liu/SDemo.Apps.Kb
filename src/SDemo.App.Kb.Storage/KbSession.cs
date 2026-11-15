@@ -113,6 +113,29 @@ public sealed class KbSession : IDisposable
         ("$state", derivedState),
         ("$id", docId));
 
+    public IReadOnlyList<DocRow> ListPendingDocs(int limit = 100)
+    {
+        using var command = Command(
+            """
+            SELECT id, kind, title, owner_app, entity_uri, uri, retention, derived_state,
+                   current_version_id, created_at, updated_at, deleted_at, expires_at, purged_at
+            FROM kb_doc
+            WHERE derived_state = 'pending' AND deleted_at IS NULL
+            ORDER BY created_at ASC
+            LIMIT $limit
+            """,
+            ("$limit", Math.Clamp(limit, 1, 500)));
+
+        using var reader = command.ExecuteReader();
+        var docs = new List<DocRow>();
+        while (reader.Read())
+        {
+            docs.Add(ReadDoc(reader));
+        }
+
+        return docs;
+    }
+
     public void SetDeleted(string docId, DateTimeOffset deletedAt) => Execute(
         "UPDATE kb_doc SET deleted_at = $at, updated_at = $at WHERE id = $id AND deleted_at IS NULL",
         ("$at", Format(deletedAt)),

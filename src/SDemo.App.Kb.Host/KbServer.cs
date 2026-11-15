@@ -172,7 +172,8 @@ public sealed class KbServer : IDisposable
 
             // 权限矩阵（kb-design §5.3）：写面归各 App；promote / retract / 收件箱 / 统计 / 设置 / MCP 只给 KB 与 Agent。
             var privilegedOnly = path is "/v1/promote" or "/v1/retract" or "/v1/promote-batch"
-                or "/v1/inbox" or "/v1/stats" or "/v1/settings/retention" or "/v1/maintain" or "/v1/docs" or "/mcp";
+                or "/v1/inbox" or "/v1/stats" or "/v1/settings/retention" or "/v1/maintain" or "/v1/docs" or "/mcp"
+                or "/v1/derivations";
 
             if (privilegedOnly && !KbService.IsPrivileged(appId))
             {
@@ -209,6 +210,12 @@ public sealed class KbServer : IDisposable
                     var payload = KbJson.Deserialize<KbMergeRequest>(body)
                         ?? throw KbException.Invalid("请求体为空。");
                     await WriteJsonAsync(response, 200, _service.Merge(payload, appId)).ConfigureAwait(false);
+                    return;
+                }
+
+                case "/v1/derivations" when IsGet(request):
+                {
+                    await WriteJsonAsync(response, 200, _service.ListDerivations(appId)).ConfigureAwait(false);
                     return;
                 }
 
@@ -409,6 +416,9 @@ public sealed class KbServer : IDisposable
 
     private static bool IsPost(HttpListenerRequest request) =>
         string.Equals(request.HttpMethod, "POST", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsGet(HttpListenerRequest request) =>
+        string.Equals(request.HttpMethod, "GET", StringComparison.OrdinalIgnoreCase);
 
     private static async Task<string> ReadBodyAsync(HttpListenerRequest request)
     {

@@ -170,6 +170,29 @@ public sealed class ArtifactView
     public string? StoredPath { get; set; }
 }
 
+/// <summary>待派生文档：扫描件 / 图片导入后，等 Agent OCR 回写块。</summary>
+public sealed class DerivationItem
+{
+    public string DocId { get; set; } = string.Empty;
+
+    public string Title { get; set; } = string.Empty;
+
+    public string Kind { get; set; } = string.Empty;
+
+    public int VersionSeq { get; set; }
+
+    public string PlaceholderBlockId { get; set; } = string.Empty;
+
+    public DateTimeOffset CreatedAt { get; set; }
+
+    public List<ArtifactView> Artifacts { get; set; } = [];
+}
+
+public sealed class DerivationListResult
+{
+    public List<DerivationItem> Items { get; set; } = [];
+}
+
 public sealed class KbGetRequest
 {
     public string DocId { get; set; } = string.Empty;

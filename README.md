@@ -3,7 +3,7 @@
 **sdemo.kb**：个人文档的版本、差异、检索与引用追溯。只存只找，**不持有模型凭证**。
 
 > 本仓是 [SDemo 主仓](https://github.com/nnbw-liu/SDemo) 的子模块（`Kb/`，主仓根级）。
-> 状态：**P4-a 地基 + P4-b 保留 + P4-e 七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并**（2026-11-14）——七工程、`SDemo.Kb.slnf`、78 个测试。
+> 状态：**P4-a 地基 + P4-b 保留 + P4-e 七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并 + Agent PDF OCR**（2026-11-15）——七工程、`SDemo.Kb.slnf`、78 个测试。
 >
 > **定位**：KB 不是一个应用，而是一块数据面 + 一个查看器。它与 DesktopAgent、DesktopAssembly 同级，**不挂在 `Apps/` 下**——写面是给所有应用用的协议，读面才是产品。
 
@@ -15,7 +15,7 @@
 | 块级 + 词级版本对比 | 查看器「对比上一版」 / `kb_diff` |
 | 设置保留策略 / 存储统计 / 重建索引 | 查看器「设置」 |
 | 导入 md / txt / docx / pptx / xlsx / 文字层 pdf | 查看器「导入」 / `kb_import` |
-| 原件入库（sha256 去重）与扫描件待识别 | 导入后自动存 `blobs\`；扫描件显示「待识别」，Agent 回写后转可检索 |
+| 原件入库（sha256 去重）与扫描件待识别 | 导入后自动存 `blobs\`；扫描件显示「待识别」，DesktopAgent 用系统 OCR 回写后转可检索 |
 | requirement 语义版本 / 分支 / 多父合并 | 自动 v1.0→v1.1，或显式 v2.0；`kb_merge` / `/v1/merge` 落双父版本 |
 | 块级修订（add / replace / remove） | 查看器「编辑块」 / `kb_update` / `POST /v1/revise` |
 | 中文两字检索 + 当前 / 历史 / 变更三面路由 | 查看器「检索」 / `kb_search` |
@@ -29,7 +29,7 @@
 | 待归档 + 批量归档 + 存储统计 | 查看器「待归档」 / `/v1/inbox` `/v1/stats` |
 | KB 离线时写入不丢 | `KbOutbox` + `KbIngestClient` |
 
-未做：图片 OCR / caption 的完整派生入口、Meeting 引用登记（尚无 `src/`）、向量检索（P4+）。
+未做：图片 OCR / caption（当前只做扫描 PDF）、Meeting 引用登记（尚无 `src/`）、向量检索（P4+）。
 
 ## 快速开始
 
