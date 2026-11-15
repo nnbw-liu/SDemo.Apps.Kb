@@ -44,7 +44,7 @@
 | **token 分发** | Host/Viewer 首次启动给白名单 App 各签一个 token，落到 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\<appId>.token`（ACL 仅当前用户）；`--tokens` 可列明文；`--issue-token` 轮换并覆盖 |
 | **Planner 引用登记** | Planner 的 `KbRefSyncLoop` 监听 link 变化立即同步，30s 兜底轮询；通过 `/v1/refs` 登记/撤销；KB 未启动时自动跳过 |
 
-**未做（按分期）**：图片 caption / 视觉模型 OCR；Meeting 侧的 `/v1/refs` 自动登记（Meeting 尚无 `src/`）；向量检索（P4+）。
+**未做（按分期）**：视觉模型 OCR（图片 caption 已由 Agent 接入）；Meeting 侧的 `/v1/refs` 自动登记（Meeting 尚无 `src/`）；向量检索（P4+）。
 
 ## 工程结构
 
@@ -174,7 +174,7 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 - 写面的 `source.appId` 由 token 决定，客户端自报的值只用于比对，不能作为 owner。
 - 导入 PDF 只支持文字层；扫描件必须由 Agent OCR 后回写块，KB 不做 OCR。
 - `derived_state=pending` 的文档不进检索；Agent 用 `kb_update` / `/v1/revise` 替换占位块后 KB 自动转 ready。
-- Agent 的 OCR 轮询 `/v1/derivations`，处理扫描 PDF 与 PNG/JPG；只读系统 OCR，不调模型，按版面拆段落/表格行；caption / 视觉模型 OCR 仍未接。
+- Agent 的 OCR 轮询 `/v1/derivations`，处理扫描 PDF 与 PNG/JPG；系统 OCR 按版面拆段落/表格行；图片说明用当前模型（失败退回纯 OCR）；视觉模型 OCR 仍未接。
 - 导入原件走 `kb_blob` + `kb_blob_ref`；版本被保留策略裁掉时要同时删 `kb_blob_ref`，否则原件永远不可回收。
 - 导入 Office 走 OOXML 解析；表格/行摘要的 anchor 是 `sheet!range`，不要只存 sheet 名。
 - 测试里用完 SQLite 要 `SqliteConnection.ClearAllPools()`，否则临时目录删不掉。
@@ -182,6 +182,8 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 ## 不要读
 
 `obj/`、`bin/`、`TestResults/`、模型/索引缓存；`docs/requirements.md` 只通读一次。
+
+
 
 
 

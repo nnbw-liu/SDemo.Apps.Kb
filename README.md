@@ -29,7 +29,7 @@
 | 待归档 + 批量归档 + 存储统计 | 查看器「待归档」 / `/v1/inbox` `/v1/stats` |
 | KB 离线时写入不丢 | `KbOutbox` + `KbIngestClient` |
 
-未做：图片 caption / 视觉模型 OCR、Meeting 引用登记（尚无 `src/`）、向量检索（P4+）。
+未做：视觉模型 OCR（图片 caption 已由 Agent 接入）、Meeting 引用登记（尚无 `src/`）、向量检索（P4+）。
 
 ## 快速开始
 
@@ -100,6 +100,7 @@ Content-Type: application/json
 - **版本不可变**：一次改动新建一个版本；块级内容寻址去重；引用存 `docId@version#block`。
 - **不做向量化差异**：只对块内容做 embedding（P2 需求，v1 可后置）。
 - 数据目录 `%APPDATA%\SDemo\Apps\sdemo.kb\`（`kb.db` + `blobs\` + `cache\`）。
+
 
 
 
