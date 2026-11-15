@@ -149,6 +149,7 @@ public static class KbUi
                 "para" => $"第 {value.GetProperty("index").GetInt32()} 段",
                 "slide" => $"第 {value.GetProperty("index").GetInt32()} 页",
                 "page" => $"第 {value.GetProperty("page").GetInt32()} 页",
+                "image" => "图片",
                 "sheet" => $"{value.GetProperty("sheet").GetString()}!{value.GetProperty("range").GetString()}",
                 "region" => "图片区域",
                 _ => string.Empty,

@@ -1,6 +1,6 @@
 # sdemo.kb 界面设计
 
-> 状态：**P4-e 七屏已实现（01 / 02 / 03 / 04 / 05 / 06 / 07）；05 导入支持 md / txt / docx / pptx / xlsx / 文字层 pdf（2026-11-14）**。
+> 状态：**P4-e 七屏已实现（01 / 02 / 03 / 04 / 05 / 06 / 07）；05 导入支持 md / txt / docx / pptx / xlsx / 文字层 pdf / png / jpg（2026-11-15）**。
 > 配套：[kb-design.md](kb-design.md)（完整设计）· [ui-mockups/](ui-mockups/)（可打开的原型）· [kb-ui-spike.md](kb-ui-spike.md)（技术落地）
 > 依赖：[SDemo.Shared 设计系统](../../Shared/UI/SDemo.UI.Blazor/wwwroot/css/sdemo-ui.css)
 
@@ -249,4 +249,5 @@ python build.py          # 重新生成 *.html
 - 版式改动：改 `kb.css`（只允许用 `sdemo-ui.css` 的 token）。
 - 设计 token 改动：改 `Shared` 子仓并升版本，回来同步 `sdemo-ui.css` 副本。
 - 截图命令见 [ui-mockups/README.md](ui-mockups/README.md)（Chrome headless，1440×900）。
+
 

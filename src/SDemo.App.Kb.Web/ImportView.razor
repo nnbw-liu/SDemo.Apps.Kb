@@ -5,18 +5,18 @@
     <div class="page-head">
         <div>
             <h2>导入</h2>
-            <p class="muted">md / txt / docx / pptx / xlsx / 文字层 pdf 导入即建 v1；同名文件再次导入按块 diff 建新版本。</p>
+            <p class="muted">md / txt / docx / pptx / xlsx / 文字层 pdf / 图片导入即建 v1；扫描件与图片先待识别，Agent OCR 后转可检索。</p>
         </div>
     </div>
 
     <div class="import-drop">
         <Icons Name="plus" />
         <h3>选择文档文件</h3>
-        <p class="muted">支持 md / txt / docx / pptx / xlsx / pdf；单文件上限 100 MB。</p>
+        <p class="muted">支持 md / txt / docx / pptx / xlsx / pdf / png / jpg / webp；单文件上限 100 MB。</p>
 
         <label class="btn btn-primary btn-sm import-pick">
             选择文件
-            <InputFile OnChange="OnFileSelected" multiple accept=".md,.markdown,.txt,.docx,.pptx,.xlsx,.pdf" />
+            <InputFile OnChange="OnFileSelected" multiple accept=".md,.markdown,.txt,.docx,.pptx,.xlsx,.pdf,.png,.jpg,.jpeg,.bmp,.webp" />
         </label>
 
         <div class="import-kind">
@@ -109,7 +109,7 @@
                 }
 
                 var extension = Path.GetExtension(file.Name).ToLowerInvariant();
-                if (extension is not (".md" or ".markdown" or ".txt" or ".docx" or ".pptx" or ".xlsx" or ".pdf"))
+                if (extension is not (".md" or ".markdown" or ".txt" or ".docx" or ".pptx" or ".xlsx" or ".pdf" or ".png" or ".jpg" or ".jpeg" or ".bmp" or ".webp"))
                 {
                     _items[0].Detail = "不支持的格式";
                     continue;
@@ -177,4 +177,5 @@
         public int Seq { get; set; }
     }
 }
+
 

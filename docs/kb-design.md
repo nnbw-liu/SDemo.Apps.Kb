@@ -1,6 +1,6 @@
 # sdemo.kb 完整设计（v1 提案）
 
-> 状态：**已拍板；P4-a 地基 + P4-b 保留 + P4-e 七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并已按本设计落地（2026-11-14）**。§2.1 schema、§3 写入面、§4 保留、§5.2 MCP 工具面均已实现并有测试覆盖；图片 OCR 与完整 Agent 派生入口见 §10。
+> 状态：**已拍板；P4-a 地基 + P4-b 保留 + P4-e 七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并 + Agent 扫描件/图片 OCR 已按本设计落地（2026-11-15）**。§2.1 schema、§3 写入面、§4 保留、§5.2 MCP 工具面均已实现并有测试覆盖；图片 caption / 视觉模型 OCR 见 §10。
 > 取代/合并：[kb-versioning.md](kb-versioning.md)（版本与追溯，仍有效）· [requirements.md](requirements.md)（需求编号）
 > 配套：[kb-ui.md](kb-ui.md)（界面设计）· [ui-mockups/](ui-mockups/)（可点原型）· [kb-ui-spike.md](kb-ui-spike.md)（P4-e 技术落地）· [kb-ingest 契约](#3-写入面)
 > 关联：[跨产品联动](../../docs/integration.md) · [Hub 契约](../../docs/contracts/hub-protocol.md) · [设计系统](../../docs/shared.md)
@@ -86,7 +86,7 @@ doc（实体）
 | pptx | `slide` | `{index}` |
 | xlsx / csv | `sheet` | `{sheet, range:"A1:D20"}` |
 | pdf | `page` | `{page, x?, y?}` |
-| 图片 | `region` | `{x, y, w, h}` |
+| 图片 | `image` | `{index}` |
 
 规则：**没有 anchor 的块不是导入产生的块**（手写块 `anchor=null`）。引用 `docId@version#block` 时，anchor 让"打开原文"可执行。
 
@@ -398,7 +398,7 @@ Agent: 调模型算向量 → kb_put_vectors(model_id, dim, vec[]) → KB 落库
 | xlsx / csv | KB | **不摊平**：sheet 概述 + 每行一句摘要 | `sheet!A1:D20` |
 | pdf（文字层） | KB | 按页 + 段落 | `page` |
 | pdf（扫描件） | Agent（OCR） | OCR 文本段 | `page` + 页图 |
-| 图片 | Agent（OCR / caption） | 一图一块 = 文本投影 | `region` |
+| 图片 | Agent（OCR / caption） | OCR 文本块 | `image` |
 | 音频 / 视频 | App（Meeting/whisper） | 转写分段 | 时间码 |
 | log | **不进 KB** | — | — |
 | 源码 | **暂不进** | — | — |
@@ -500,4 +500,5 @@ derived_state: pending | ready | failed
 - 版本与追溯细节：[kb-versioning.md](kb-versioning.md)
 - 需求编号：[requirements.md](requirements.md)
 - 跨产品契约：[integration.md](../../docs/integration.md) · [hub-protocol.md](../../docs/contracts/hub-protocol.md)
+
 

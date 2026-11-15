@@ -20,7 +20,7 @@
 
 ## 现状（2026-11-15）
 
-✅ **P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 78 个测试。
+✅ **P4-a 地基 + P4-b 保留 + P4-e 查看器七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并已落地**：五件套 + Web/Viewer + `SDemo.Kb.slnf` + 79 个测试。
 
 | 已做 | 说明 |
 | --- | --- |
@@ -35,16 +35,16 @@
 | 引用登记 | `/v1/refs` / `/v1/refs/retract`：Planner/Meeting 把实体 URI 对 KB 的引用写进 `kb_link`（`doc_id=''`），影响面/GC/清理保护才算数 |
 | MCP | 12 个 `kb_*` 工具 + 风险/审批元数据；`kb_update` / `kb_delete` 高风险；`kb_merge` 中风险 |
 | 写入方 outbox | `KbOutbox` + `KbIngestClient`；KB 离线时写入落本地队列，不抛回业务事务 |
-| 导入 | md / txt / docx / pptx / xlsx / 文字层 pdf；导入即建 `v1`；再次导入按块 diff 建新版本 |
-| **原件与派生** | 导入原件按 sha256 存 `blobs\` 并写 `kb_blob_ref`；扫描件 PDF 建 `derived_state=pending`，不进检索；Agent 用系统 OCR 读 `storedPath`，`/v1/derivations` 取占位块，`/v1/revise` 回写后自动转 ready |
-| **anchor** | docx `para` / pptx `slide` / xlsx `sheet!range` / pdf `page` / md `offset`；查看器块右侧显示位置 |
+| 导入 | md / txt / docx / pptx / xlsx / 文字层 pdf / png / jpg / webp；导入即建 `v1`；再次导入按块 diff 建新版本 |
+| **原件与派生** | 导入原件按 sha256 存 `blobs\` 并写 `kb_blob_ref`；扫描件 PDF / 图片建 `derived_state=pending`，不进检索；Agent 用系统 OCR 读 `storedPath`，`/v1/derivations` 取占位块，`/v1/revise` 回写后自动转 ready |
+| **anchor** | docx `para` / pptx `slide` / xlsx `sheet!range` / pdf `page` / 图片 `image` / md `offset`；查看器块右侧显示位置 |
 | **保留与 GC** | staging TTL（会议 30 / Agent 90，可被 `ttlDays` 覆盖）→ 软删 → 回收站 7 天 → 块/原件 GC；被引用文档整篇保护 |
 | **待归档与统计** | `/v1/inbox`（到期倒计时、正文/原件体积）、`/v1/promote-batch`、`/v1/stats`、`/v1/settings/retention`；Host 每小时维护，`--maintain` 手动跑 |
-| **查看器** | WPF + BlazorWebView（选项 A：内嵌 KbServer）；01 全部文档 / 02 文档详情 / 03 版本对比 / 04 待归档 / 05 导入（Office/PDF）/ 06 检索 / 07 设置；深浅色、Ctrl K |
+| **查看器** | WPF + BlazorWebView（选项 A：内嵌 KbServer）；01 全部文档 / 02 文档详情 / 03 版本对比 / 04 待归档 / 05 导入（Office/PDF/图片）/ 06 检索 / 07 设置；深浅色、Ctrl K |
 | **token 分发** | Host/Viewer 首次启动给白名单 App 各签一个 token，落到 `%LOCALAPPDATA%\SDemo\Hub\apps\sdemo.kb\tokens\<appId>.token`（ACL 仅当前用户）；`--tokens` 可列明文；`--issue-token` 轮换并覆盖 |
 | **Planner 引用登记** | Planner 的 `KbRefSyncLoop` 监听 link 变化立即同步，30s 兜底轮询；通过 `/v1/refs` 登记/撤销；KB 未启动时自动跳过 |
 
-**未做（按分期）**：图片 OCR / caption；Meeting 侧的 `/v1/refs` 自动登记（Meeting 尚无 `src/`）；向量检索（P4+）。
+**未做（按分期）**：图片 caption / 视觉模型 OCR；Meeting 侧的 `/v1/refs` 自动登记（Meeting 尚无 `src/`）；向量检索（P4+）。
 
 ## 工程结构
 
@@ -174,7 +174,7 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 - 写面的 `source.appId` 由 token 决定，客户端自报的值只用于比对，不能作为 owner。
 - 导入 PDF 只支持文字层；扫描件必须由 Agent OCR 后回写块，KB 不做 OCR。
 - `derived_state=pending` 的文档不进检索；Agent 用 `kb_update` / `/v1/revise` 替换占位块后 KB 自动转 ready。
-- Agent 的 PDF OCR 轮询 `/v1/derivations`，只读系统 OCR，不调模型；图片 OCR/caption 仍未接。
+- Agent 的 OCR 轮询 `/v1/derivations`，处理扫描 PDF 与 PNG/JPG；只读系统 OCR，不调模型，按版面拆段落/表格行；caption / 视觉模型 OCR 仍未接。
 - 导入原件走 `kb_blob` + `kb_blob_ref`；版本被保留策略裁掉时要同时删 `kb_blob_ref`，否则原件永远不可回收。
 - 导入 Office 走 OOXML 解析；表格/行摘要的 anchor 是 `sheet!range`，不要只存 sheet 名。
 - 测试里用完 SQLite 要 `SqliteConnection.ClearAllPools()`，否则临时目录删不掉。
@@ -182,6 +182,8 @@ $env:SDEMO_KB_DATA_DIR = <目录>   # 或环境变量
 ## 不要读
 
 `obj/`、`bin/`、`TestResults/`、模型/索引缓存；`docs/requirements.md` 只通读一次。
+
+
 
 
 

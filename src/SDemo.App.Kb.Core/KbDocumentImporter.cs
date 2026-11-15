@@ -29,7 +29,7 @@ public static partial class KbDocumentImporter
         var document = ExtractDocument(fileName, stream);
         if (document.RequiresDerivation)
         {
-            throw KbException.Invalid("PDF 没有文字层（扫描件需要 Agent OCR，P4-d 尾再接）。");
+            throw KbException.Invalid("文件没有文字层（扫描件 / 图片需要 Agent OCR）。");
         }
 
         return document.Blocks;
@@ -56,10 +56,12 @@ public static partial class KbDocumentImporter
                 ".pptx" => ExtractPptx(stream),
                 ".xlsx" => ExtractXlsx(stream),
                 ".pdf" => ExtractPdf(stream),
+                ".png" or ".jpg" or ".jpeg" or ".bmp" or ".webp" => [],
                 _ => throw KbException.Invalid($"不支持导入的格式：{extension}"),
             };
 
-            var requiresDerivation = extension == ".pdf" && blocks.Count == 0;
+            var requiresDerivation = blocks.Count == 0
+                && extension is ".pdf" or ".png" or ".jpg" or ".jpeg" or ".bmp" or ".webp";
             return new ImportedDocument(blocks, requiresDerivation);
         }
         catch (KbException)

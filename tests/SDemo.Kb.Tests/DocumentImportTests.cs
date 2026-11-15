@@ -185,6 +185,27 @@ public sealed class DocumentImportTests
     }
 
     [Fact]
+    public void 图片导入建pending并保留原件()
+    {
+        // 1x1 PNG；KB 不解码图片，只负责 pending + 原件。
+        var png = Convert.FromBase64String(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nH0AAAAASUVORK5CYII=");
+
+        using var kb = new TestKb();
+        var result = kb.Service.ImportContent("scan.png", png);
+
+        var content = kb.Service.Get(new KbGetRequest { DocId = result.DocId })!;
+        Assert.Equal(DerivedState.Pending, content.Doc.DerivedState);
+        Assert.Contains("待识别", content.Blocks[0].Text);
+        var artifact = Assert.Single(content.Artifacts);
+        Assert.Equal("image/png", artifact.Mime);
+        Assert.True(File.Exists(artifact.StoredPath));
+
+        var pending = Assert.Single(kb.Service.ListDerivations("sdemo.agent").Items);
+        Assert.Equal("scan.png", pending.Artifacts[0].Name);
+    }
+
+    [Fact]
     public void 无文字层PDF建pending文档_回写后转ready并可检索()
     {
         var builder = new PdfDocumentBuilder();

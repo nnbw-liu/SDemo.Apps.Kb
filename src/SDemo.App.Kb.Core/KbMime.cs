@@ -11,6 +11,10 @@ public static class KbMime
         ".pptx" => "application/vnd.openxmlformats-officedocument.presentationml.presentation",
         ".xlsx" => "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         ".pdf" => "application/pdf",
+        ".png" => "image/png",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".bmp" => "image/bmp",
+        ".webp" => "image/webp",
         _ => null,
     };
 }

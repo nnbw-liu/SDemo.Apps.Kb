@@ -3,7 +3,7 @@
 **sdemo.kb**：个人文档的版本、差异、检索与引用追溯。只存只找，**不持有模型凭证**。
 
 > 本仓是 [SDemo 主仓](https://github.com/nnbw-liu/SDemo) 的子模块（`Kb/`，主仓根级）。
-> 状态：**P4-a 地基 + P4-b 保留 + P4-e 七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并 + Agent PDF OCR**（2026-11-15）——七工程、`SDemo.Kb.slnf`、78 个测试。
+> 状态：**P4-a 地基 + P4-b 保留 + P4-e 七屏 + P4-d 格式/原件/派生 + P4-c 语义版本/多父合并 + Agent OCR**（2026-11-15）——七工程、`SDemo.Kb.slnf`、79 个测试。
 >
 > **定位**：KB 不是一个应用，而是一块数据面 + 一个查看器。它与 DesktopAgent、DesktopAssembly 同级，**不挂在 `Apps/` 下**——写面是给所有应用用的协议，读面才是产品。
 
@@ -29,7 +29,7 @@
 | 待归档 + 批量归档 + 存储统计 | 查看器「待归档」 / `/v1/inbox` `/v1/stats` |
 | KB 离线时写入不丢 | `KbOutbox` + `KbIngestClient` |
 
-未做：图片 OCR / caption（当前只做扫描 PDF）、Meeting 引用登记（尚无 `src/`）、向量检索（P4+）。
+未做：图片 caption / 视觉模型 OCR、Meeting 引用登记（尚无 `src/`）、向量检索（P4+）。
 
 ## 快速开始
 
@@ -100,6 +100,8 @@ Content-Type: application/json
 - **版本不可变**：一次改动新建一个版本；块级内容寻址去重；引用存 `docId@version#block`。
 - **不做向量化差异**：只对块内容做 embedding（P2 需求，v1 可后置）。
 - 数据目录 `%APPDATA%\SDemo\Apps\sdemo.kb\`（`kb.db` + `blobs\` + `cache\`）。
+
+
 
 
 
